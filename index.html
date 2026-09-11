@@ -1,0 +1,4029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Awakening — Core Loop Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0d0e1a; --panel: #161a2e; --panel-border: #2a2f4a;
+    --ink: #e7e6f0; --ink-dim: #9b9ab3;
+    --violet: #7c5cff; --violet-dim: #4a3a99;
+    --gold: #e8b34d; --danger: #e2555f; --good: #4cd684;
+    --rank-D: #8b8f98; --rank-C: #4cae6d; --rank-B: #4c8fe8; --rank-A: #a64ce8; --rank-S: #e8b34d;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: radial-gradient(ellipse at top, #14172b 0%, #08091a 65%);
+    color: var(--ink); font-family: 'Inter', sans-serif; min-height:100vh;
+    display:flex; flex-direction:column; align-items:center; padding: 20px 12px 40px;
+    -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  }
+  h1,h2,h3{ font-family:'Cinzel', serif; font-weight:600; margin:0; }
+  .title{ font-size: 28px; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .subtitle{ color: var(--ink-dim); font-size: 13px; margin-bottom: 22px; text-align:center; }
+  .layout{ display:flex; gap:18px; max-width: 920px; width:100%; }
+  .stage-wrap{ display:flex; flex-direction:column; gap: 14px; flex: 1; min-width:0; }
+  .dpad{
+    display:none; align-self:center; grid-template-columns: 56px 56px 56px; grid-template-rows: 56px 56px 56px;
+    gap:6px; margin-top: 4px; user-select:none;
+  }
+  .dpad button{ width:56px; height:56px; font-size:20px; display:flex; align-items:center; justify-content:center; padding:0; margin:0; }
+  .dpad .up{ grid-column:2; grid-row:1; } .dpad .left{ grid-column:1; grid-row:2; }
+  .dpad .down{ grid-column:2; grid-row:2; } .dpad .right{ grid-column:3; grid-row:2; }
+  @media (max-width: 760px){
+    .layout{ flex-direction:column; align-items:center; }
+    .hud{ width:100%; max-width: 420px; }
+    #gameCanvas{ max-width: 100%; }
+    .hint{ display:none; }
+    .dpad{ display:grid; }
+  }
+  #gameCanvas{ background:#10132a; border:1px solid var(--panel-border); border-radius:10px; display:block; width:100%; height:auto; }
+  .hint{ font-size: 12px; color: var(--ink-dim); text-align:center; }
+  .hud{
+    width: 240px; background: var(--panel); border: 1px solid var(--panel-border);
+    border-radius: 10px; padding: 16px; display:flex; flex-direction:column; gap: 12px; height: fit-content;
+  }
+  .hud-row{ display:flex; justify-content:space-between; font-size:13px; }
+  .hud-label{ color: var(--ink-dim); }
+  .rank-pill{ display:inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; font-family:'Cinzel',serif; }
+  .bar-track{ width:100%; height: 8px; background: #0b0d1a; border-radius: 999px; overflow:hidden; border: 1px solid var(--panel-border); }
+  .bar-fill{ height:100%; border-radius:999px; transition: width .3s ease; }
+  .hp-fill{ background: linear-gradient(90deg, #e2555f, #ff8a8a); }
+  .xp-fill{ background: linear-gradient(90deg, var(--violet), #a48bff); }
+  .focus-fill{ background: linear-gradient(90deg, #4c8fe8, #8ec0ff); }
+  .hud-buttons{ display:flex; flex-direction:column; gap:8px; margin-top:4px; }
+  button{
+    font-family:'Inter',sans-serif; font-weight:600; font-size: 13px; border-radius: 7px;
+    border: 1px solid var(--panel-border); background: #1c2140; color: var(--ink);
+    padding: 9px 12px; cursor:pointer; transition: background .15s ease, border-color .15s ease, transform .1s ease;
+  }
+  button:hover{ background:#262c52; border-color: var(--violet-dim); }
+  button:active{ transform: scale(0.98); }
+  button.primary{ background: var(--violet); border-color: var(--violet); color:#fff; }
+  button.primary:hover{ background:#6b4de8; }
+  button.danger{ background: transparent; border-color: var(--danger); color: var(--danger); }
+  button.danger:hover{ background: rgba(226,85,95,0.12); }
+  button:disabled{ opacity:.4; cursor:not-allowed; }
+  button:disabled:hover{ background:#1c2140; }
+  .overlay{ position:fixed; inset:0; background: rgba(6,7,15,0.72); display:flex; align-items:center; justify-content:center; z-index: 50; padding: 20px; }
+  .modal{
+    background: var(--panel); border: 1px solid var(--panel-border); border-radius: 12px;
+    padding: 24px; max-width: 480px; width:100%; max-height: 84vh; overflow-y:auto; position:relative;
+  }
+  .modal h2{ font-size:19px; margin-bottom:6px; }
+  .modal p.desc{ color: var(--ink-dim); font-size: 13px; margin: 6px 0 18px; line-height:1.5; }
+  .choice-row{ display:flex; gap:10px; margin-bottom: 10px; flex-wrap:wrap; }
+  .choice-card{ flex:1; min-width: 100px; border:1px solid var(--panel-border); border-radius: 9px; padding: 14px 10px; text-align:center; cursor:pointer; background:#1c2140; }
+  .choice-card:hover{ border-color: var(--violet); }
+  .choice-card .icon{ font-size: 26px; margin-bottom:6px; }
+  .choice-card .name{ font-family:'Cinzel',serif; font-size:14px; }
+  .choice-card .flavor{ font-size:11px; color:var(--ink-dim); margin-top:4px; }
+  .modal-actions{ display:flex; gap:10px; justify-content:flex-end; margin-top: 18px; flex-wrap:wrap; }
+  .close-x{ position:absolute; top:14px; right:16px; background:none; border:none; color:var(--ink-dim); font-size:18px; padding:2px 6px; }
+  .log-box{
+    background:#0b0d1a; border: 1px solid var(--panel-border); border-radius: 8px; padding: 10px 12px;
+    font-size: 12.5px; color: var(--ink-dim); max-height: 110px; overflow-y:auto; margin: 12px 0; line-height:1.6;
+  }
+  .log-box .level-line{ color: var(--gold); font-weight:600; }
+  .combatants{ display:flex; gap:16px; margin-bottom: 6px; }
+  .combatant{ flex:1; }
+  .combatant .name{ font-size:13px; font-weight:600; margin-bottom:4px; display:flex; justify-content:space-between; }
+  .combatant .hp-text{ font-size: 11px; color: var(--ink-dim); }
+  .focus-row{ display:flex; justify-content:space-between; font-size:11px; color:var(--ink-dim); margin: 8px 0 2px; }
+  .stat-row{ display:flex; align-items:center; justify-content:space-between; padding:6px 0; border-bottom: 1px solid #23273f; font-size:13px; }
+  .stat-row:last-child{ border-bottom:none; }
+  .stepper{ display:flex; align-items:center; gap:10px; }
+  .stepper button{ width:26px; height:26px; padding:0; display:flex; align-items:center; justify-content:center; }
+  .item-row{ display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #23273f; font-size:13px; gap:10px; }
+  .item-row:last-child{ border-bottom:none; }
+  .empty-note{ color:var(--ink-dim); font-size:13px; text-align:center; padding: 14px 0; }
+  .toast{
+    position:fixed; bottom: 26px; left:50%; transform:translateX(-50%);
+    background: #1c2140; border:1px solid var(--violet-dim); padding: 10px 18px; border-radius: 8px;
+    font-size: 13px; z-index: 60; opacity:0; pointer-events:none; transition: opacity .25s ease, transform .25s ease;
+  }
+  .toast.show{ opacity:1; transform: translateX(-50%) translateY(-6px); }
+  .skill-tag{ display:inline-block; font-size:11px; padding:2px 8px; border-radius:6px; background:#23274a; color: var(--violet); margin: 2px 4px 2px 0; border:1px solid var(--violet-dim); }
+  .dungeon-card{
+    border:1px solid var(--panel-border); border-radius: 9px; padding: 12px 14px; margin-bottom:8px;
+    display:flex; justify-content:space-between; align-items:center; gap:10px; background:#1c2140;
+  }
+  .dungeon-card.locked{ opacity:.45; }
+  .dungeon-card .info .name{ font-family:'Cinzel',serif; font-size:14px; }
+  .dungeon-card .info .meta{ font-size:11px; color:var(--ink-dim); margin-top:2px; }
+  .quest-box{ background:#0b0d1a; border:1px solid var(--panel-border); border-radius:8px; padding:12px 14px; margin: 10px 0 4px; }
+  .quest-box .qtitle{ font-size:12px; color:var(--ink-dim); margin-bottom:4px; }
+  .branch-title{ font-family:'Cinzel',serif; font-size:14px; margin: 14px 0 4px; color: var(--gold); }
+</style>
+</head>
+<body>
+
+<div class="title">Awakening</div>
+<div class="subtitle">City → Sanctuary → Guild → Dungeon — core loop prototype<br><span style="opacity:.7;">Progress saves automatically to this browser.</span></div>
+
+<div class="layout">
+  <div class="stage-wrap">
+    <canvas id="gameCanvas" width="640" height="420"></canvas>
+    <div class="hint">Move with WASD / Arrow keys. Stand near a building and press <b>E / Space / Enter</b> or click the prompt to enter.</div>
+    <button id="btnPrompt" class="primary" style="display:none; margin-top:8px; width:100%;">Enter Building</button>
+    <div class="dpad" id="dpad">
+      <button class="up" data-dir="up">▲</button>
+      <button class="left" data-dir="left">◀</button>
+      <button class="down" data-dir="down">▼</button>
+      <button class="right" data-dir="right">▶</button>
+    </div>
+  </div>
+
+  <div class="hud">
+    <div>
+      <h3 id="hudClass">Unawakened</h3>
+      <span id="hudRank" class="rank-pill" style="display:none;"></span>
+    </div>
+    <div class="hud-row"><span class="hud-label">Level</span><span id="hudLevel">1</span></div>
+    <div class="hud-row"><span class="hud-label">Gold</span><span id="hudGold">0</span></div>
+    <div>
+      <div class="hud-row"><span class="hud-label">HP</span><span id="hpText">20 / 20</span></div>
+      <div class="bar-track"><div class="bar-fill hp-fill" id="hpBar" style="width:100%"></div></div>
+    </div>
+    <div>
+      <div class="hud-row"><span class="hud-label">XP</span><span id="xpText">0 / 20</span></div>
+      <div class="bar-track"><div class="bar-fill xp-fill" id="xpBar" style="width:0%"></div></div>
+    </div>
+    <div class="hud-buttons">
+      <button id="btnStats">Character Sheet<span id="pointsBadge"></span></button>
+      <button id="btnTree">Skill Tree</button>
+      <button id="btnInventory">Inventory (<span id="invCount">0</span>)</button>
+      <button id="btnSound">🔊 Sound: ON</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+<div id="modalRoot"></div>
+
+<script>
+/* ================= DATA ================= */
+const RANKS = ["S","A","B","C","D"]; // strongest to weakest (display / loot table order)
+const RANK_WEIGHTS = [2,8,18,30,42]; // % chance on awakening, aligned to RANKS
+const RANK_BONUS = { S:12, A:7, B:4, C:2, D:0 };
+const SELL_VALUE = { S:100, A:50, B:25, C:12, D:5 };
+
+const RANK_ORDER_WEAK_TO_STRONG = ["D","C","B","A","S"];
+const RANKUP_LEVEL = { D:8, C:14, B:20, A:28 };
+function nextRank(r){
+  const i = RANK_ORDER_WEAK_TO_STRONG.indexOf(r);
+  return (i>=0 && i<RANK_ORDER_WEAK_TO_STRONG.length-1) ? RANK_ORDER_WEAK_TO_STRONG[i+1] : null;
+}
+
+/* Skill node types: damage, heal, shield, crit_buff, evade, dot, extra_turn
+   Every node: { id, name, unlockLevel, goldCost, cost(focus) , type, ...type-specific fields } */
+const CLASSES = {
+  Swordsman: {
+    icon: "⚔️",
+    flavor: "Melee power. Strength & vitality.",
+    baseStats: { STR:7, VIT:6, INT:2, AGI:4 },
+    atkStat: "STR",
+    tree: {
+      Berserker: [
+        { id:'sw_b1', name:'Power Strike', unlockLevel:3, goldCost:0, cost:1, type:'damage', mult:1.7 },
+        { id:'sw_b2', name:'Rending Cut', unlockLevel:7, goldCost:60, cost:2, type:'damage', mult:1.9, executeThreshold:0.4, executeMult:1.5 },
+        { id:'sw_b3', name:'Bloodfury', unlockLevel:12, goldCost:150, cost:1, type:'crit_buff' }
+      ],
+      Guardian: [
+        { id:'sw_g1', name:'Second Wind', unlockLevel:3, goldCost:0, cost:2, type:'heal', healPct:0.35 },
+        { id:'sw_g2', name:'Iron Bulwark', unlockLevel:7, goldCost:60, cost:2, type:'shield', shieldMult:4 },
+        { id:'sw_g3', name:'Unbreakable', unlockLevel:12, goldCost:150, cost:3, type:'shield', shieldMult:8 }
+      ]
+    }
+  },
+  Mage: {
+    icon: "🔮",
+    flavor: "Arcane power. Intellect & precision.",
+    baseStats: { STR:2, VIT:4, INT:7, AGI:5 },
+    atkStat: "INT",
+    tree: {
+      Pyromancer: [
+        { id:'mg_p1', name:'Fire Bolt', unlockLevel:3, goldCost:0, cost:1, type:'damage', mult:1.7 },
+        { id:'mg_p2', name:'Ice Nova', unlockLevel:7, goldCost:60, cost:2, type:'damage', mult:2.3 },
+        { id:'mg_p3', name:'Meteor', unlockLevel:12, goldCost:150, cost:3, type:'damage', mult:3.2 }
+      ],
+      Arcanist: [
+        { id:'mg_a1', name:'Mana Ward', unlockLevel:3, goldCost:0, cost:2, type:'shield', shieldMult:4 },
+        { id:'mg_a2', name:'Drain Bolt', unlockLevel:7, goldCost:60, cost:2, type:'damage', mult:1.5, lifesteal:0.5 },
+        { id:'mg_a3', name:'Time Warp', unlockLevel:12, goldCost:150, cost:3, type:'extra_turn', mult:1.3 }
+      ]
+    }
+  },
+  Assassin: {
+    icon: "🗡️",
+    flavor: "Lethal precision. Agility & critical strikes.",
+    baseStats: { STR:4, VIT:4, INT:2, AGI:8 },
+    atkStat: "AGI",
+    tree: {
+      Shadowblade: [
+        { id:'as_s1', name:'Shadow Strike', unlockLevel:3, goldCost:0, cost:1, type:'damage', mult:1.7 },
+        { id:'as_s2', name:'Assassinate', unlockLevel:7, goldCost:60, cost:2, type:'damage', mult:1.6, executeThreshold:0.4, executeMult:1.6 },
+        { id:'as_s3', name:'Death Mark', unlockLevel:12, goldCost:150, cost:1, type:'crit_buff' }
+      ],
+      Trickster: [
+        { id:'as_t1', name:'Poison Blade', unlockLevel:3, goldCost:0, cost:1, type:'dot', dotMult:1.5, dotTurns:3 },
+        { id:'as_t2', name:'Smoke Bomb', unlockLevel:7, goldCost:60, cost:2, type:'evade' },
+        { id:'as_t3', name:'Thousand Cuts', unlockLevel:12, goldCost:150, cost:3, type:'damage', mult:0.9, hits:3 }
+      ]
+    }
+  },
+  Ranger: {
+    icon: "🏹",
+    flavor: "Precision archery & trap control. Agility & dexterity.",
+    baseStats: { STR: 4, VIT: 4, INT: 3, AGI: 8 },
+    atkStat: "AGI",
+    tree: {
+      Sharpshooter: [
+        { id:'rg_s1', name:'Piercing Shot', unlockLevel:3, goldCost:0, cost:1, type:'damage', mult:1.8 },
+        { id:'rg_s2', name:'Volley of Arrows', unlockLevel:7, goldCost:60, cost:2, type:'damage', mult:0.8, hits:3 },
+        { id:'rg_s3', name:'Eagle Eye', unlockLevel:12, goldCost:150, cost:1, type:'crit_buff' }
+      ],
+      Tracker: [
+        { id:'rg_t1', name:'Bear Trap', unlockLevel:3, goldCost:0, cost:1, type:'dot', dotMult:1.6, dotTurns:3 },
+        { id:'rg_t2', name:'Disengage', unlockLevel:7, goldCost:60, cost:2, type:'evade' },
+        { id:'rg_t3', name:'Rain of Flames', unlockLevel:12, goldCost:150, cost:3, type:'damage', mult:3.0, dotTurns:2, dotMult:1.0 }
+      ]
+    }
+  },
+  Paladin: {
+    icon: "✝️",
+    flavor: "Divine fury & holy protection. Strength & intellect.",
+    baseStats: { STR: 6, VIT: 7, INT: 5, AGI: 2 },
+    atkStat: "STR",
+    tree: {
+      HolyAvenger: [
+        { id:'pl_h1', name:'Smite', unlockLevel:3, goldCost:0, cost:1, type:'damage', mult:1.8 },
+        { id:'pl_h2', name:'Holy Judgment', unlockLevel:7, goldCost:60, cost:2, type:'damage', mult:2.4, lifesteal:0.25 },
+        { id:'pl_h3', name:'Divine Wrath', unlockLevel:12, goldCost:150, cost:3, type:'damage', mult:3.2, executeThreshold:0.35, executeMult:1.6 }
+      ],
+      TemplarGuard: [
+        { id:'pl_t1', name:'Sacred Shield', unlockLevel:3, goldCost:0, cost:2, type:'shield', shieldMult:5 },
+        { id:'pl_t2', name:'Radiant Aura', unlockLevel:7, goldCost:60, cost:2, type:'heal', healPct:0.30 },
+        { id:'pl_t3', name:'Aegis of Light', unlockLevel:12, goldCost:150, cost:3, type:'shield', shieldMult:9 }
+      ]
+    }
+  },
+  Monk: {
+    icon: "☯️",
+    flavor: "Martial mastery & elemental ki. Vitality & agility.",
+    baseStats: { STR: 5, VIT: 6, INT: 4, AGI: 6 },
+    atkStat: "AGI",
+    tree: {
+      FistOfGales: [
+        { id:'mk_f1', name:'Flurry of Blows', unlockLevel:3, goldCost:0, cost:1, type:'damage', mult:0.7, hits:3 },
+        { id:'mk_f2', name:'Thunder Kick', unlockLevel:7, goldCost:60, cost:2, type:'damage', mult:2.3 },
+        { id:'mk_f3', name:'Dragon Strike', unlockLevel:12, goldCost:150, cost:3, type:'damage', mult:3.4 }
+      ],
+      ChakraMaster: [
+        { id:'mk_c1', name:'Meditation', unlockLevel:3, goldCost:0, cost:1, type:'heal', healPct:0.25 },
+        { id:'mk_c2', name:'Iron Palm', unlockLevel:7, goldCost:60, cost:2, type:'shield', shieldMult:5 },
+        { id:'mk_c3', name:'Nirvana Surge', unlockLevel:12, goldCost:150, cost:3, type:'extra_turn', mult:2.5 }
+      ]
+    }
+  },
+  Necromancer: {
+    icon: "💀",
+    flavor: "Master of shadow magic & soul harvest. High Intellect & Vitality.",
+    baseStats: { STR: 2, VIT: 6, INT: 8, AGI: 4 },
+    atkStat: "INT",
+    tree: {
+      SoulHarvest: [
+        { id:'nc_s1', name:'Soul Drain', unlockLevel:3, goldCost:0, cost:1, type:'damage', mult:1.8, lifesteal:0.40 },
+        { id:'nc_s2', name:'Bone Armor', unlockLevel:7, goldCost:60, cost:2, type:'shield', shieldMult:6 },
+        { id:'nc_s3', name:'Death Nova', unlockLevel:12, goldCost:150, cost:3, type:'damage', mult:3.4, dotTurns:3, dotMult:1.2 }
+      ],
+      UndeadArmy: [
+        { id:'nc_u1', name:'Raise Skeleton', unlockLevel:3, goldCost:0, cost:1, type:'damage', mult:1.5 },
+        { id:'nc_u2', name:'Curse of Decay', unlockLevel:7, goldCost:60, cost:2, type:'dot', dotMult:2.2, dotTurns:3 },
+        { id:'nc_u3', name:'Army of the Dead', unlockLevel:12, goldCost:150, cost:3, type:'damage', mult:4.0 }
+      ]
+    }
+  },
+  Berserker: {
+    icon: "🪓",
+    flavor: "Unbridled rage & savage blades. Pure Strength & Vitality.",
+    baseStats: { STR: 9, VIT: 7, INT: 1, AGI: 3 },
+    atkStat: "STR",
+    tree: {
+      BloodRage: [
+        { id:'bs_r1', name:'Reckless Cleave', unlockLevel:3, goldCost:0, cost:1, type:'damage', mult:2.2 },
+        { id:'bs_r2', name:'Vampiric Frenzy', unlockLevel:7, goldCost:60, cost:2, type:'damage', mult:2.7, lifesteal:0.35 },
+        { id:'bs_r3', name:'Blood Decimation', unlockLevel:12, goldCost:150, cost:3, type:'damage', mult:3.8 }
+      ],
+      Juggernaut: [
+        { id:'bs_j1', name:'Battle Cry', unlockLevel:3, goldCost:0, cost:1, type:'heal', healPct:0.20 },
+        { id:'bs_j2', name:'Unstoppable Rage', unlockLevel:7, goldCost:60, cost:2, type:'shield', shieldMult:7 },
+        { id:'bs_j3', name:'Earthshaker Slam', unlockLevel:12, goldCost:150, cost:3, type:'damage', mult:3.5 }
+      ]
+    }
+  }
+};
+
+/* Rare unique skills — not tied to any class tree, only learned from Skill Tomes */
+const UNIQUE_SKILLS = [
+  { id:'uniq_starfall', name:'Starfall', type:'damage', mult:2.6, cost:3, flavor:'A blazing meteor descends on your foe.' },
+  { id:'uniq_phoenix', name:'Phoenix Reversal', type:'heal', healPct:0.6, cost:3, flavor:'Restore a great portion of your HP in a burst of flame.' },
+  { id:'uniq_voidrend', name:'Voidrend', type:'damage', mult:1.4, hits:4, cost:3, flavor:'Four rending strikes from beyond.' }
+];
+
+const ITEM_POOL = {
+  S: [
+    { name:"Dawnfang Blade", slot:"weapon", statBonus:{STR:8, AGI:2}, critBonus:8, set:"vanguard" },
+    { name:"Aegis of the Sanctum", slot:"armor", statBonus:{VIT:9, STR:2}, set:"vanguard" },
+    { name:"Crown of the Awakened", slot:"accessory", statBonus:{INT:5, AGI:4}, passiveXp:{scope:'all', mult:0.15}, set:"archon" }
+  ],
+  A: [
+    { name:"Runed Greatsword", slot:"weapon", statBonus:{STR:6, INT:1}, critBonus:5, set:"archon" },
+    { name:"Knight's Plate", slot:"armor", statBonus:{VIT:6, STR:1}, set:"vanguard" },
+    { name:"Sigil of the Vanguard", slot:"accessory", statBonus:{AGI:5, VIT:1}, passiveXp:{scope:'A', mult:0.2}, set:"shadowweaver" }
+  ],
+  B: [
+    { name:"Steel Broadsword", slot:"weapon", statBonus:{STR:4, AGI:1}, critBonus:3, set:"shadowweaver" },
+    { name:"Chainmail Hauberk", slot:"armor", statBonus:{VIT:4, AGI:-1}, set:"vanguard" },
+    { name:"Amulet of Focus", slot:"accessory", statBonus:{INT:3}, passiveXp:{scope:'B', mult:0.2}, set:"archon" }
+  ],
+  C: [
+    { name:"Iron Shortsword", slot:"weapon", statBonus:{STR:2}, critBonus:2, set:"shadowweaver" },
+    { name:"Leather Vest", slot:"armor", statBonus:{VIT:2}, set:"vanguard" },
+    { name:"Hunter's Ring", slot:"accessory", statBonus:{AGI:2}, passiveXp:{scope:'C', mult:0.15}, set:"archon" }
+  ],
+  D: [
+    { name:"Worn Dagger", slot:"weapon", statBonus:{STR:1}, critBonus:1, set:"shadowweaver" },
+    { name:"Cracked Buckler", slot:"armor", statBonus:{VIT:1, AGI:-1}, set:"vanguard" },
+    { name:"Frayed Cloak", slot:"accessory", statBonus:{AGI:1}, passiveXp:{scope:'D', mult:0.1}, set:"archon" }
+  ]
+};
+
+const ARTIFACT_SET_BONUSES = {
+  vanguard: {
+    name: "Vanguard Titan",
+    color: "#4c8fe8",
+    twoPiece: "+15 Max HP",
+    fourPiece: "Reflect 20% Damage & +15 Starting Shield"
+  },
+  shadowweaver: {
+    name: "Shadowweaver Lethality",
+    color: "#a64ce8",
+    twoPiece: "+10% Crit Chance",
+    fourPiece: "Crits deal +30% extra damage"
+  },
+  archon: {
+    name: "Archon Sovereign",
+    color: "#e8b34d",
+    twoPiece: "+15% Skill Damage",
+    fourPiece: "Skill Focus costs reduced by 1"
+  }
+};
+let itemIdCounter = 1;
+
+const DUNGEONS = [
+  { rank:'D', name:'Sunken Cellar', unlockLevel:1, rooms:2, tierMult:1,   xpMult:1,   prefix:'Cave',    bossName:'Bonewarden',     bossTrait:'vicious' },
+  { rank:'C', name:'Hollow Ravine', unlockLevel:5, rooms:2, tierMult:1.6, xpMult:1.3, prefix:'Ravine',  bossName:'Marrow Hound',    bossTrait:'vicious' },
+  { rank:'B', name:'Frostbound Crypt', unlockLevel:10, rooms:3, tierMult:2.4, xpMult:1.7, prefix:'Frost', bossName:'Grave Warden',  bossTrait:'armored' },
+  { rank:'A', name:'Ashen Spire', unlockLevel:16, rooms:3, tierMult:3.6, xpMult:2.2, prefix:'Ashen',   bossName:'Cinder Wraith',   bossTrait:'vicious' },
+  { rank:'S', name:'Sanctum of the Fallen King', unlockLevel:24, rooms:4, tierMult:5.2, xpMult:3, prefix:'Sanctum', bossName:'The Fallen King', bossTrait:'armored' }
+];
+const DUNGEON_TIER_MULT = {};
+DUNGEONS.forEach(d=> DUNGEON_TIER_MULT[d.rank] = d.tierMult);
+
+const ENEMY_TEMPLATES = [
+  { base:"Slime", trait:"regen" },
+  { base:"Rat", trait:"vicious" },
+  { base:"Wisp", trait:"none" },
+  { base:"Golem", trait:"armored" }
+];
+
+const QUESTS = [
+  { id:1, desc:"Clear the Sunken Cellar (D-Rank) once.", type:'clearDungeon', targetRank:'D', targetCount:1, rewardGold:20, rewardXp:10 },
+  { id:2, desc:"Clear 3 dungeons of any rank.", type:'clearAny', targetCount:3, rewardGold:50, rewardXp:25 },
+  { id:3, desc:"Reach Level 10.", type:'reachLevel', targetCount:10, rewardGold:80, rewardXp:0 },
+  { id:4, desc:"Clear a B-Rank dungeon.", type:'clearDungeon', targetRank:'B', targetCount:1, rewardGold:120, rewardXp:0 },
+  { id:5, desc:"Reach Level 20.", type:'reachLevel', targetCount:20, rewardGold:200, rewardXp:0 }
+];
+
+const TALENT_TIERS = [
+  { level:4, options:[
+    { id:'t4a', name:'Iron Skin', desc:'+8% max HP', apply:p=>{ p.talentMods.vitPct += 0.08; } },
+    { id:'t4b', name:'Keen Eye', desc:'+5% critical hit chance', apply:p=>{ p.talentMods.critFlat += 5; } }
+  ]},
+  { level:9, options:[
+    { id:'t9a', name:'Bloodlust', desc:'+10% damage dealt', apply:p=>{ p.talentMods.dmgPct += 0.10; } },
+    { id:'t9b', name:'Focused Mind', desc:'+2 max Focus', apply:p=>{ p.talentMods.focusFlat += 2; } }
+  ]},
+  { level:14, options:[
+    { id:'t14a', name:'Vampiric Edge', desc:'Heal for 10% of damage dealt', apply:p=>{ p.talentMods.lifesteal += 0.10; } },
+    { id:'t14b', name:"Guardian's Will", desc:'-10% damage taken', apply:p=>{ p.talentMods.dmgTakenPct -= 0.10; } }
+  ]},
+  { level:19, options:[
+    { id:'t19a', name:'Golden Touch', desc:'+20% gold from dungeon clears', apply:p=>{ p.talentMods.goldPct += 0.20; } },
+    { id:'t19b', name:'Adrenaline', desc:'+15% XP from dungeon clears', apply:p=>{ p.talentMods.xpPct += 0.15; } }
+  ]},
+  { level:24, options:[
+    { id:'t24a', name:'Executioner', desc:'+25% damage vs enemies below 30% HP', apply:p=>{ p.talentMods.executePct += 0.25; } },
+    { id:'t24b', name:'Second Chance', desc:'Survive a killing blow with 1 HP, once per dungeon', apply:p=>{ p.talentMods.secondChance = true; } }
+  ]}
+];
+
+const FUSED_SKILLS = [
+  { id:'fuse_infernal', name:'Infernal Slash', cost:2, type:'damage', mult:2.8, dotTurns:3, dotMult:1.0, req:['sw_b1','mg_p1'], flavor:'Melee strike enveloped in hellfire.' },
+  { id:'fuse_celestial', name:'Celestial Barrier', cost:2, type:'heal', healPct:0.30, shieldMult:5, req:['sw_g1','mg_a1'], flavor:'Divine aura heals and shields.' },
+  { id:'fuse_venom', name:'Venomous Ambush', cost:2, type:'damage', mult:2.5, dotTurns:3, dotMult:1.5, req:['as_t1','as_s1'], flavor:'Shadow strike carrying lethal venom.' },
+  { id:'fuse_starburst', name:'Starburst Shot', cost:2, type:'damage', mult:3.0, dotTurns:3, dotMult:1.0, req:['rg_s1','mg_p1'], flavor:'Enchanted arrow erupting into starfire.' },
+  { id:'fuse_divinefist', name:'Divine Dragon Palm', cost:2, type:'heal', healPct:0.35, mult:2.4, req:['pl_h1','mk_f1'], flavor:'Holy martial strike healing and striking.' }
+];
+
+const SPECIALIZATIONS = {
+  Swordsman: [
+    { id: 'Paladin Knight', icon: '🛡️', desc: '+15% Max HP & Holy Shield reflects 20% incoming damage.' },
+    { id: 'Blood Berserker', icon: '🩸', desc: '+30% Damage Dealt when HP is below 50%.' }
+  ],
+  Mage: [
+    { id: 'Archmage', icon: '⚡', desc: '25% chance to cast damage skills twice without extra Focus.' },
+    { id: 'Necromancer', icon: '💀', desc: 'Summons a Skeletal Minion that strikes enemy for 8 damage every turn.' }
+  ],
+  Assassin: [
+    { id: 'Shadow Stalker', icon: '👤', desc: 'Your first attack in every fight deals 2.5x damage.' },
+    { id: 'Venom Master', icon: '🧪', desc: 'Poison DoTs deal double damage per turn.' }
+  ],
+  Ranger: [
+    { id: 'Sniper', icon: '🦅', desc: 'Your attacks ignore 50% enemy defense & +20% Crit Chance.' },
+    { id: 'Beast Master', icon: '🐺', desc: 'Summons a Spirit Wolf that strikes for 10 damage every turn.' }
+  ],
+  Paladin: [
+    { id: 'Inquisitor', icon: '✝️', desc: '+40% bonus damage vs Shadow & Undead enemies.' },
+    { id: 'Sun Guardian', icon: '🌟', desc: '+25% Max HP & reflects 25% of incoming damage.' }
+  ],
+  Monk: [
+    { id: 'Storm Saint', icon: '⚡', desc: 'Basic attacks strike twice (50% dmg on 2nd hit) & +15% Dodge.' },
+    { id: 'Asura Berserker', icon: '🔥', desc: '+15% damage per Combo stack (up to +75% total).' }
+  ],
+  Necromancer: [
+    { id: 'Lich Lord', icon: '🧙‍♂️', desc: '+25% Shadow skill damage & 30% freeze chance on hit.' },
+    { id: 'Dread Master', icon: '💀', desc: 'Summons 2 Skeletal Minions dealing 16 total damage per turn.' }
+  ],
+  Berserker: [
+    { id: 'Blood Warlord', icon: '🩸', desc: '+50% Attack Speed & 25% Lifesteal when HP falls below 50%.' },
+    { id: 'Titan Dreadnought', icon: '🛡️', desc: '+30% Max HP & cannot be stunned by boss skills.' }
+  ]
+};
+
+const PETS_CATALOG = [
+  { id: 'wisp', name: 'Spectral Wisp', icon: '👻', color: '#8ec0ff', desc: 'Restores +2 Focus at the start of combat.' },
+  { id: 'hound', name: 'Marrow Hound', icon: '🐕', color: '#e88b4d', desc: 'Bites enemy for 7 bonus damage every 3 turns.' },
+  { id: 'cat', name: 'Shadow Cat', icon: '🐱', color: '#a48bff', desc: '+15% Gold & Item drop rate.' }
+];
+
+const RELICS_CATALOG = [
+  { id: 'rel_reflection', name: 'Ring of Reflection', rank: 'S', slot: 'relic1', statBonus: {VIT: 3}, desc: 'Reflect 20% incoming damage back at attacker.' },
+  { id: 'rel_midas', name: 'Scroll of Midas', rank: 'A', slot: 'relic1', statBonus: {AGI: 2}, desc: 'Converts 10% of damage dealt into bonus Gold.' },
+  { id: 'rel_aegis', name: 'Aegis Sigil', rank: 'A', slot: 'relic2', statBonus: {VIT: 4}, desc: 'Gain a 15 HP shield at the start of every fight.' },
+  { id: 'rel_soul', name: 'Soul Crystal', rank: 'S', slot: 'relic2', statBonus: {INT: 5}, desc: '+1 Focus max and +10% skill damage.' }
+];
+
+const BUILDINGS = [
+  { id:"sanctuary", name:"Sanctuary",    x:15,  y:60, w:90, h:85, color:"#5b3fa8" },
+  { id:"guild",     name:"Guild Hall",   x:115, y:60, w:90, h:85, color:"#a8792f" },
+  { id:"merchant",  name:"Merchant",     x:215, y:60, w:90, h:85, color:"#2f7a5b" },
+  { id:"forge",     name:"Forge",        x:315, y:60, w:90, h:85, color:"#8c3a27" },
+  { id:"arena",     name:"Arena",        x:415, y:60, w:90, h:85, color:"#b5651d" },
+  { id:"dungeon",   name:"Dungeon Gate", x:515, y:60, w:90, h:85, color:"#7a2c2c" },
+  { id:"spire",     name:"Spire 100",    x:315, y:200, w:90, h:85, color:"#4a3a99" },
+  { id:"pond",      name:"Fishing Pond", x:20,  y:320, w:110, h:65, color:"#1f5385" },
+  { id:"casino",    name:"Goblin Casino",x:450, y:320, w:110, h:65, color:"#8a2be2" },
+  { id:"portal",    name:"Realm Portal", x:215, y:320, w:110, h:65, color:"#3a7ca5" },
+  { id:"stables",   name:"Mount Stables",x:115, y:320, w:110, h:65, color:"#6b4a2b" },
+  { id:"alchemy",   name:"Alchemy Lab",  x:315, y:320, w:110, h:65, color:"#2a7b6c" }
+];
+
+const GEMS_CATALOG = [
+  { id: 'ruby', name: 'Ruby', icon: '🔴', desc: '+10% Fire Damage & +3 STR' },
+  { id: 'sapphire', name: 'Sapphire', icon: '🔵', desc: '+15% Max HP & +3 VIT' },
+  { id: 'topaz', name: 'Topaz', icon: '🟡', desc: '+8% Crit Chance & +3 AGI' },
+  { id: 'emerald', name: 'Emerald', icon: '🟢', desc: '+10% Lifesteal & +3 INT' }
+];
+
+const HERBS_CATALOG = [
+  { id: 'sunbloom', name: 'Sunbloom', icon: '🌺', desc: 'Rare radiant flower harvested from magic rifts.' },
+  { id: 'frostlotus', name: 'Frost Lotus', icon: '❄️', desc: 'Chilling lotus blossom harvested from icy nodes.' },
+  { id: 'voidshard', name: 'Void Shard', icon: '🔮', desc: 'Crystalline shard pulsing with dark energy.' }
+];
+
+const BREWS_CATALOG = [
+  { id: 'poisonCoating', name: 'Poison Blade Coating', icon: '🧪', desc: 'Applies 3 turns of stackable poison to basic attacks.', cost: { sunbloom: 2 } },
+  { id: 'invulnerable', name: 'Elixir of Invulnerability', icon: '🛡️', desc: 'Become immune to all incoming damage for 2 turns.', cost: { frostlotus: 2, voidshard: 1 } },
+  { id: 'astralBrew', name: 'Astral XP Brew', icon: '⭐', desc: 'Instantly grants +300 XP to your hero.', cost: { voidshard: 2, sunbloom: 2 } }
+];
+
+const DRAGONS_CATALOG = [
+  { id: 'inferno', name: 'Inferno Drake', icon: '🔥', stage: 1, desc: 'Deals 35 Fire Dmg breath attack in combat.', cost: { gold: 300, monsterCore: 2 } },
+  { id: 'glacier', name: 'Glacier Wyrm', icon: '❄️', stage: 1, desc: 'Freezes enemy for 2 turns with absolute zero blast.', cost: { gold: 350, monsterCore: 2 } },
+  { id: 'void', name: 'Void Dragon', icon: '🌑', stage: 1, desc: 'Unleashes Void Nova dealing 45 Shadow Dmg.', cost: { gold: 400, monsterCore: 3 } }
+];
+
+const MERCENARIES_CATALOG = [
+  { id: 'gryphon', name: 'Gryphon Knight', icon: '🛡️', role: 'Defender', desc: 'Taunts enemy & absorbs 30% of incoming damage.', cost: 150, hp: 45, maxHp: 45 },
+  { id: 'ranger', name: 'Elven Ranger', icon: '🏹', role: 'Striker', desc: 'Strikes for 12 bonus physical damage every turn.', cost: 180, hp: 30, maxHp: 30 },
+  { id: 'cleric', name: 'Sun Cleric', icon: '☀️', role: 'Healer', desc: 'Restores +15 HP to hero every 3 turns.', cost: 200, hp: 35, maxHp: 35 }
+];
+
+const INCANTATIONS_CATALOG = [
+  { id: 'thorns', name: 'Incantation of Thorns', icon: '📜', desc: 'Reflect 25% of incoming melee damage back at attacker.', cost: { shadowEssence: 2, monsterCore: 1 } },
+  { id: 'haste', name: 'Incantation of Haste', icon: '📜', desc: 'Reduces all skill Focus costs by 1 (min 1).', cost: { shadowEssence: 3, monsterCore: 1 } },
+  { id: 'greed', name: 'Incantation of Greed', icon: '📜', desc: '+35% Gold dropped from all victories.', cost: { shadowEssence: 2, monsterCore: 2 } }
+];
+
+const MOUNTS_CATALOG = [
+  { id: 'warbear', name: 'Armored Warbear', icon: '🐻', cost: 200, speedBonus: 0.20, hpBonus: 20, desc: '+20 Max HP & +50% Overworld Speed' },
+  { id: 'panther', name: 'Shadow Panther', icon: '🐆', cost: 250, speedBonus: 0.50, critBonus: 10, desc: '+50% Movement Speed & +10% Crit Chance' },
+  { id: 'gryphon', name: 'Storm Gryphon', icon: '🦅', cost: 300, speedBonus: 0.40, focusBonus: 1, desc: '+40% Speed & Start combat with +1 Focus' }
+];
+
+const TAROT_CARDS = [
+  { id: 'sun', name: 'The Sun', icon: '☀️', desc: 'Ignite enemies for +30% Fire damage per turn.' },
+  { id: 'tower', name: 'The Tower', icon: '🗼', desc: '+25 Shield & Armor, but reduces Dodge by 10%.' },
+  { id: 'fool', name: 'The Fool', icon: '🃏', desc: '20% chance to cast skills twice without Focus cost.' },
+  { id: 'death', name: 'Death', icon: '💀', desc: 'Instantly execute non-boss enemies below 25% HP.' },
+  { id: 'wheel', name: 'Wheel of Fortune', icon: '🎡', desc: '+50% Gold & Item drop rate in dungeon.' }
+];
+
+const RUNES_CATALOG = [
+  { id: 'tempest', name: 'Rune of Tempest', icon: '⚡', cost: { shadowEssence: 3, monsterCore: 2 }, desc: 'Counter-attack for 15 damage whenever you dodge an attack.' },
+  { id: 'bloodlust', name: 'Rune of Bloodlust', icon: '🩸', cost: { shadowEssence: 4, monsterCore: 2 }, desc: 'Heals 15% Max HP on every Critical Hit.' },
+  { id: 'chronos', name: 'Rune of Chronos', icon: '⏳', cost: { shadowEssence: 5, monsterCore: 3 }, desc: 'Restores 3 Focus energy when HP drops below 30%.' }
+];
+
+const ACHIEVEMENTS_CATALOG = [
+  { id: 'awakened', name: 'The Awakening', desc: 'Awaken your class at the Sanctuary.', title: 'The Awakened' },
+  { id: 'artisan', name: 'Master Artisan', desc: 'Upgrade any gear item to +5.', title: 'Master Artisan' },
+  { id: 'spire10', name: 'Tower Conqueror', desc: 'Reach Floor 10 in the Spire of Trials.', title: 'Tower Conqueror' },
+  { id: 'dragonSlayer', name: 'Dragon Slayer', desc: 'Defeat Calamity Dragon Ignis in Raid.', title: 'Dragon Slayer' },
+  { id: 'elementMaster', name: 'Elementalist', desc: 'Trigger Burn, Freeze, and Shock in combat.', title: 'Elementalist' },
+  { id: 'colossusShatterer', name: 'Colossus Shatterer', desc: 'Shatter the Ancient Stone Colossus.', title: 'Colossus Shatterer' },
+  { id: 'cityDefender', name: 'City Defender', desc: 'Defend Sunlit Haven Capital from a monster siege.', title: 'City Defender' },
+  { id: 'paragonMaster', name: 'Paragon Sovereign', desc: 'Achieve Paragon Prestige Ascension.', title: 'Paragon Sovereign' }
+];
+
+const ELEMENT_MATRIX = {
+  Fire: { beats: 'Frost', status: 'Burn', symbol: '🔥' },
+  Frost: { beats: 'Lightning', status: 'Freeze', symbol: '❄️' },
+  Lightning: { beats: 'Fire', status: 'Shock', symbol: '⚡' },
+  Holy: { beats: 'Shadow', status: 'Purify', symbol: '☀️' },
+  Shadow: { beats: 'Holy', status: 'Corrupt', symbol: '🌑' }
+};
+
+/* ================= STATE ================= */
+function defaultTalentMods(){
+  return { vitPct:0, critFlat:0, dmgPct:0, focusFlat:0, lifesteal:0, dmgTakenPct:0, goldPct:0, xpPct:0, executePct:0, secondChance:false };
+}
+function defaultPlayer(){
+  return {
+    class: null, specialization: null, rank: null, level: 1, xp:0, xpToNext: 20,
+    statPoints: 0, stats: {STR:5,VIT:5,INT:5,AGI:5},
+    hp: 20, maxHp: 20, gold: 0,
+    guildRegistered:false, inventory: [], unlockedSkills: [], fusedSkills: [],
+    equipment: { weapon:null, armor:null, accessory:null, relic1:null, relic2:null },
+    consumables: { potion: 0, elixirMight: 0, flaskFocus: 0 },
+    materials: { ironOre: 0, shadowEssence: 0, monsterCore: 0 },
+    herbs: { sunbloom: 0, frostlotus: 0, voidshard: 0 },
+    dragons: [], activeDragon: null,
+    paragonLevel: 0,
+    pets: [], activePet: null,
+    mounts: [], activeMount: null,
+    runes: { tempest: 0, bloodlust: 0, chronos: 0 },
+    socketedRunes: [],
+    mercenaries: [], activeMercenary: null,
+    incantations: [], activeIncantations: [],
+    gems: { ruby: 0, sapphire: 0, topaz: 0, emerald: 0 },
+    bounties: { combo3: false, arena3: false, forgeUpgrade: false },
+    spireFloor: 1,
+    buildingLevels: { sanctuary: 1, guild: 1, merchant: 1, forge: 1 },
+    expedition: null,
+    achievements: {},
+    activeTitle: null,
+    currentZone: 'sunlit',
+    constellations: { orion: 0, ursa: 0, phoenix: 0 },
+    transmog: 'default',
+    dungeonClears: { S:0, A:0, B:0, C:0, D:0, total:0 },
+    questIndex: 0,
+    talentMods: defaultTalentMods(), talentsChosen: {}, pendingTalents: [],
+    shield: 0, guaranteedCritNext: false, evadeNext: false,
+    dungeonBuffs: { dmgPct: 0, focusStart: false, mightActive: false }
+  };
+}
+const state = {
+  player: defaultPlayer(),
+  pos: { x: 300, y: 300 },
+  keys: {},
+  lastEntered: null,
+  nearBuilding: null,
+  nearSecret: null,
+  nearBoss: null,
+  nearColossus: false,
+  combat: null,
+  colossusBoss: { x: 280, y: 180, hp: 500, maxHp: 500, phase: 1, active: true },
+  selectedMutators: { infernal: false, ironclad: false, vampiric: false },
+  worldTime: 0,
+  weather: 'clear',
+  rainDrops: Array.from({length: 35}, () => ({ x: Math.random()*600, y: Math.random()*400, speed: 220 + Math.random()*180 })),
+  roamingBoss: { x: 440, y: 180 },
+  overworldSecrets: [
+    { type: 'ore', x: 160, y: 240, label: '🪨 Iron Node' },
+    { type: 'rift', x: 480, y: 240, label: '🌟 Magic Rift' }
+  ]
+};
+
+/* ================= AUDIO SYNTHESIZER ================= */
+const Sound = (function(){
+  let ctx = null;
+  let muted = false;
+
+  function initCtx(){
+    if(!ctx){
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if(AudioCtx) ctx = new AudioCtx();
+    }
+    if(ctx && ctx.state === 'suspended'){
+      ctx.resume();
+    }
+  }
+
+  function playTone(freq, type, duration, startVol=0.12, endVol=0.001, pitchSweep=null){
+    if(muted) return;
+    initCtx();
+    if(!ctx) return;
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+      if(pitchSweep){
+        osc.frequency.exponentialRampToValueAtTime(Math.max(10, pitchSweep), ctx.currentTime + duration);
+      }
+      gain.gain.setValueAtTime(startVol, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(endVol, ctx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + duration);
+    } catch(e){}
+  }
+
+  function playNoise(duration, startVol=0.12, endVol=0.001){
+    if(muted) return;
+    initCtx();
+    if(!ctx) return;
+    try {
+      const bufferSize = ctx.sampleRate * duration;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) { data[i] = Math.random() * 2 - 1; }
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(startVol, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(endVol, ctx.currentTime + duration);
+      noise.connect(gain);
+      gain.connect(ctx.destination);
+      noise.start();
+    } catch(e){}
+  }
+
+  return {
+    init: initCtx,
+    toggleMute: function(){
+      muted = !muted;
+      return muted;
+    },
+    isMuted: function(){ return muted; },
+    click: function(){ playTone(440, 'sine', 0.04, 0.06); },
+    attack: function(){ playNoise(0.08, 0.15, 0.005); playTone(180, 'sawtooth', 0.08, 0.08, 0.005, 50); },
+    magic: function(){ playTone(523.25, 'sine', 0.2, 0.1, 0.005, 1046.5); },
+    heal: function(){ playTone(329.63, 'triangle', 0.25, 0.12, 0.005, 659.25); },
+    crit: function(){ playNoise(0.12, 0.2, 0.005); playTone(120, 'square', 0.15, 0.15, 0.005, 30); },
+    levelUp: function(){
+      [261.63, 329.63, 392.00, 523.25].forEach((n, i) => {
+        setTimeout(() => playTone(n, 'triangle', 0.18, 0.12), i * 75);
+      });
+    },
+    loot: function(){ playTone(880, 'sine', 0.06, 0.1, 0.005, 1760); },
+    defeat: function(){ playTone(220, 'sawtooth', 0.35, 0.15, 0.005, 55); }
+  };
+})();
+
+/* ================= PERSISTENT SAVE ================= */
+const SAVE_KEY = 'awakening_player_save';
+let saveTimer = null;
+function saveGame(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=>{
+    try{ localStorage.setItem(SAVE_KEY, JSON.stringify(state.player)); }
+    catch(e){ console.error('Save failed', e); }
+  }, 150);
+}
+function loadGame(){
+  try{
+    const res = localStorage.getItem(SAVE_KEY);
+    if(res){
+      const loaded = JSON.parse(res);
+      const merged = defaultPlayer();
+      Object.assign(merged, loaded);
+      merged.talentMods = Object.assign(defaultTalentMods(), loaded.talentMods||{});
+      merged.talentsChosen = loaded.talentsChosen || {};
+      merged.pendingTalents = loaded.pendingTalents || [];
+      merged.consumables = Object.assign({ potion: 0, elixirMight: 0, flaskFocus: 0 }, loaded.consumables||{});
+      merged.materials = Object.assign({ ironOre: 0, shadowEssence: 0, monsterCore: 0 }, loaded.materials||{});
+      merged.dungeonBuffs = Object.assign({ dmgPct: 0, focusStart: false, mightActive: false }, loaded.dungeonBuffs||{});
+      merged.buildingLevels = Object.assign({ sanctuary: 1, guild: 1, merchant: 1, forge: 1 }, loaded.buildingLevels||{});
+      merged.gems = Object.assign({ ruby: 0, sapphire: 0, topaz: 0, emerald: 0 }, loaded.gems||{});
+      merged.mercenaries = loaded.mercenaries || [];
+      merged.activeMercenary = loaded.activeMercenary || null;
+      merged.incantations = loaded.incantations || [];
+      merged.activeIncantations = loaded.activeIncantations || [];
+      merged.achievements = loaded.achievements || {};
+      merged.activeTitle = loaded.activeTitle || null;
+      merged.expedition = loaded.expedition || null;
+      merged.shield = 0; merged.guaranteedCritNext = false; merged.evadeNext = false;
+      Object.assign(state.player, merged);
+      recomputeDerived(state.player);
+    }
+  }catch(e){ /* no save yet — proceed with defaults */ }
+  refreshHud();
+}
+function resetGame(){
+  openModal(`
+    <h2>Reset Progress</h2>
+    <p class="desc">This will permanently erase your character. Are you sure?</p>
+    <div class="modal-actions">
+      <button onclick="closeModal()">Cancel</button>
+      <button class="danger" onclick="confirmReset()">Erase & Reset</button>
+    </div>
+  `);
+}
+function confirmReset(){
+  try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
+  location.reload();
+}
+
+/* ================= CANVAS / CITY ================= */
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const SPEED = 160; // pixels per second (frame-rate independent)
+const PSIZE = 20;
+
+window.addEventListener('keydown', e => {
+  Sound.init();
+  const k = e.key.toLowerCase();
+  if(k==='w'||k==='a'||k==='s'||k==='d'||k==='arrowup'||k==='arrowdown'||k==='arrowleft'||k==='arrowright'){
+    state.keys[k] = true;
+  }
+  if((k==='e' || k===' ' || k==='enter') && !document.getElementById('modalRoot').children.length){
+    if(state.nearBuilding) handleEnter(state.nearBuilding.id);
+    else if(state.nearSecret) harvestSecret(state.nearSecret.idx);
+  }
+});
+window.addEventListener('keyup', e => {
+  const k = e.key.toLowerCase();
+  if(k==='w'||k==='a'||k==='s'||k==='d'||k==='arrowup'||k==='arrowdown'||k==='arrowleft'||k==='arrowright'){
+    state.keys[k] = false;
+  }
+});
+document.addEventListener('click', e => {
+  Sound.init();
+  if (e.target.tagName === 'BUTTON' || e.target.classList.contains('choice-card')) {
+    Sound.click();
+  }
+});
+
+const btnSoundEl = document.getElementById('btnSound');
+if(btnSoundEl){
+  btnSoundEl.addEventListener('click', () => {
+    const isMuted = Sound.toggleMute();
+    btnSoundEl.textContent = isMuted ? '🔇 Sound: OFF' : '🔊 Sound: ON';
+  });
+}
+
+canvas.addEventListener('click', (e) => {
+  if(!document.getElementById('modalRoot').children.length){
+    if(state.nearBuilding){
+      const rect = canvas.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+      const b = state.nearBuilding;
+      if(clickX >= b.x - 20 && clickX <= b.x + b.w + 20 && clickY >= b.y - 35 && clickY <= b.y + b.h + 20){
+        handleEnter(b.id);
+        return;
+      }
+    }
+    if(state.nearSecret){
+      harvestSecret(state.nearSecret.idx);
+    }
+  }
+});
+
+const dirKeyMap = { up:'arrowup', down:'arrowdown', left:'arrowleft', right:'arrowright' };
+document.querySelectorAll('#dpad button').forEach(btn=>{
+  const key = dirKeyMap[btn.dataset.dir];
+  const press = (e)=>{ e.preventDefault(); Sound.init(); state.keys[key] = true; };
+  const release = (e)=>{ e.preventDefault(); state.keys[key] = false; };
+  btn.addEventListener('touchstart', press, {passive:false});
+  btn.addEventListener('touchend', release, {passive:false});
+  btn.addEventListener('touchcancel', release, {passive:false});
+  btn.addEventListener('mousedown', press);
+  btn.addEventListener('mouseup', release);
+  btn.addEventListener('mouseleave', release);
+});
+
+function rectsOverlap(a,b){ return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y; }
+
+function update(dt){
+  if(document.getElementById('modalRoot').children.length) return;
+  state.worldTime = (state.worldTime || 0) + dt;
+
+  // Weather tick
+  if(Math.floor(state.worldTime*10) % 300 === 0 && Math.random() < 0.08){
+    state.weather = Math.random() < 0.4 ? 'rain' : 'clear';
+  }
+
+  if(state.weather === 'rain' && state.rainDrops){
+    state.rainDrops.forEach(d => {
+      d.y += d.speed * dt;
+      if(d.y > canvas.height){ d.y = 0; d.x = Math.random()*canvas.width; }
+    });
+  }
+
+  let mountSpeedMult = 1;
+  if(state.player.activeMount){
+    const m = MOUNTS_CATALOG.find(x=>x.id===state.player.activeMount);
+    if(m) mountSpeedMult += m.speedBonus;
+  }
+  const moveSpeed = SPEED * mountSpeedMult;
+
+  let dx=0, dy=0;
+  if(state.keys['arrowup']||state.keys['w']) dy -= moveSpeed * dt;
+  if(state.keys['arrowdown']||state.keys['s']) dy += moveSpeed * dt;
+  if(state.keys['arrowleft']||state.keys['a']) dx -= moveSpeed * dt;
+  if(state.keys['arrowright']||state.keys['d']) dx += moveSpeed * dt;
+  state.pos.x = Math.max(0, Math.min(canvas.width-PSIZE, state.pos.x+dx));
+  state.pos.y = Math.max(90, Math.min(canvas.height-PSIZE, state.pos.y+dy));
+
+  const pRect = { x: state.pos.x, y: state.pos.y, w: PSIZE, h: PSIZE };
+  let touching = null;
+  for(const b of BUILDINGS){
+    const proxRect = { x: b.x - 12, y: b.y - 12, w: b.w + 24, h: b.h + 24 };
+    if(rectsOverlap(pRect, proxRect)) touching = b;
+  }
+
+  let touchingSecret = null;
+  if(state.overworldSecrets){
+    state.overworldSecrets.forEach((sec, idx) => {
+      const dist = Math.hypot(state.pos.x + PSIZE/2 - sec.x, state.pos.y + PSIZE/2 - sec.y);
+      if(dist < 28) touchingSecret = { sec, idx };
+    });
+  }
+
+  const cycleSec = (state.worldTime || 0) % 180;
+  const isBloodMoon = cycleSec >= 150;
+  let touchingBoss = false;
+  if(isBloodMoon && state.roamingBoss){
+    const distBoss = Math.hypot(state.pos.x + PSIZE/2 - state.roamingBoss.x, state.pos.y + PSIZE/2 - state.roamingBoss.y);
+    if(distBoss < 32) touchingBoss = true;
+  }
+
+  let touchingColossus = false;
+  if(state.colossusBoss && state.colossusBoss.active){
+    const distCol = Math.hypot(state.pos.x + PSIZE/2 - state.colossusBoss.x, state.pos.y + PSIZE/2 - state.colossusBoss.y);
+    if(distCol < 36) touchingColossus = true;
+  }
+
+  state.nearBuilding = touching;
+  state.nearSecret = touchingSecret;
+  state.nearBoss = touchingBoss;
+  state.nearColossus = touchingColossus;
+
+  const promptBtn = document.getElementById('btnPrompt');
+  if(promptBtn){
+    if(touchingColossus){
+      promptBtn.style.display = 'block';
+      promptBtn.textContent = `Challenge Ancient Stone Colossus 🗿 (Press E / Space)`;
+      promptBtn.onclick = () => startColossusBossCombat();
+    } else if(touchingBoss){
+      promptBtn.style.display = 'block';
+      promptBtn.textContent = `Challenge Roaming Crimson Fiend 🩸 (Press E / Space)`;
+      promptBtn.onclick = () => startRoamingBossCombat();
+    } else if(touching){
+      promptBtn.style.display = 'block';
+      promptBtn.textContent = `Enter ${touching.name} (Press E / Space)`;
+      promptBtn.onclick = () => handleEnter(touching.id);
+    } else if(touchingSecret){
+      promptBtn.style.display = 'block';
+      promptBtn.textContent = `Harvest ${touchingSecret.sec.label} (Press E / Space)`;
+      promptBtn.onclick = () => harvestSecret(touchingSecret.idx);
+    } else {
+      promptBtn.style.display = 'none';
+    }
+  }
+}
+
+function harvestSecret(idx){
+  if(!state.overworldSecrets) return;
+  const secret = state.overworldSecrets[idx];
+  if(!secret) return;
+  const p = state.player;
+  if(secret.type === 'ore'){
+    const oreFound = Math.floor(Math.random()*3) + 2;
+    p.materials.ironOre = (p.materials.ironOre||0) + oreFound;
+    toast(`Harvested Iron Node! +${oreFound} Iron Ore`, 'var(--gold)');
+    Sound.loot();
+  } else if(secret.type === 'rift'){
+    const essFound = Math.floor(Math.random()*2) + 1;
+    p.materials.shadowEssence = (p.materials.shadowEssence||0) + essFound;
+    p.hp = Math.min(p.maxHp, p.hp + Math.round(p.maxHp*0.25));
+    toast(`Channeled Magic Rift! +${essFound} Shadow Essence & Restored HP`, 'var(--violet)');
+    Sound.magic();
+  }
+  secret.x = Math.floor(Math.random()*500) + 50;
+  secret.y = Math.floor(Math.random()*250) + 120;
+  refreshHud();
+}
+
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  
+  const cycleSec = (state.worldTime || 0) % 180;
+  const zone = (state.player && state.player.currentZone) || 'sunlit';
+  let skyColor = "#171a2f", groundColor = "#20253f", timeLabel = "☀️ Day";
+  if(zone === 'ashen'){
+    skyColor = "#241014"; groundColor = "#1e0c10"; timeLabel = "🔥 Ashen Realm";
+  } else if(zone === 'frost'){
+    skyColor = "#0d1d2a"; groundColor = "#0a1724"; timeLabel = "❄️ Frost Realm";
+  } else {
+    if(cycleSec >= 150){ skyColor = "#2e0b12"; groundColor = "#3a1017"; timeLabel = "🩸 Blood Moon"; }
+    else if(cycleSec >= 90){ skyColor = "#0b0d1e"; groundColor = "#10132a"; timeLabel = "🌙 Night"; }
+    else if(cycleSec >= 60){ skyColor = "#2a1936"; groundColor = "#331e42"; timeLabel = "🌆 Dusk"; }
+  }
+
+  ctx.fillStyle = skyColor;
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = groundColor;
+  ctx.fillRect(0,90,canvas.width,canvas.height-90);
+
+  if(state.weather === 'rain' && state.rainDrops){
+    ctx.strokeStyle = "rgba(142, 192, 255, 0.4)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    state.rainDrops.forEach(d => {
+      ctx.moveTo(d.x, d.y);
+      ctx.lineTo(d.x - 2, d.y + 7);
+    });
+    ctx.stroke();
+  }
+
+  // Draw HUD Time & Weather Badge
+  ctx.fillStyle = "rgba(10, 12, 26, 0.75)";
+  ctx.fillRect(canvas.width - 175, 10, 165, 24);
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+  ctx.strokeRect(canvas.width - 175, 10, 165, 24);
+  ctx.fillStyle = cycleSec >= 150 ? "#e2555f" : "#e8b34d";
+  ctx.font = "bold 11px Inter";
+  ctx.textAlign = "center";
+  ctx.fillText(`${timeLabel} ${state.weather==='rain'?'🌧️':''}`, canvas.width - 92, 26);
+
+  BUILDINGS.forEach(b=>{
+    const isNear = state.nearBuilding && state.nearBuilding.id === b.id;
+    ctx.fillStyle = b.color;
+    ctx.fillRect(b.x,b.y,b.w,b.h);
+    ctx.strokeStyle = isNear ? "#e8b34d" : "rgba(255,255,255,0.15)";
+    ctx.lineWidth = isNear ? 2 : 1;
+    ctx.strokeRect(b.x,b.y,b.w,b.h);
+    ctx.lineWidth = 1;
+    
+    ctx.fillStyle = isNear ? "#e8b34d" : "#e7e6f0";
+    ctx.font = isNear ? "bold 12px Inter" : "12px Inter";
+    ctx.textAlign = "center";
+    ctx.fillText(b.name, b.x+b.w/2, b.y+b.h+16);
+
+    if(isNear){
+      ctx.fillStyle = "rgba(124, 92, 255, 0.95)";
+      ctx.fillRect(b.x - 8, b.y - 28, b.w + 16, 22);
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold 11px Inter";
+      ctx.fillText("[E / Tap] Enter", b.x + b.w/2, b.y - 13);
+    }
+  });
+
+  // Draw Roaming Blood Moon Boss
+  if(cycleSec >= 150 && state.roamingBoss){
+    const bx = state.roamingBoss.x, by = state.roamingBoss.y;
+    ctx.fillStyle = "rgba(226, 85, 95, 0.3)";
+    ctx.beginPath();
+    ctx.arc(bx, by, 16 + Math.sin(state.worldTime*6)*4, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = "#e2555f";
+    ctx.font = "18px Inter";
+    ctx.textAlign = "center";
+    ctx.fillText("🩸", bx, by + 6);
+  }
+
+  // Draw Ancient Stone Colossus Raid Boss
+  if(state.colossusBoss && state.colossusBoss.active){
+    const cx = state.colossusBoss.x, cy = state.colossusBoss.y;
+    ctx.fillStyle = "rgba(107, 74, 43, 0.4)";
+    ctx.beginPath();
+    ctx.arc(cx, cy, 22 + Math.sin(state.worldTime*4)*3, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = "#e8b34d";
+    ctx.font = "22px Inter";
+    ctx.textAlign = "center";
+    ctx.fillText("🗿", cx, cy + 8);
+    ctx.font = "bold 10px Inter";
+    ctx.fillText("Ancient Colossus", cx, cy - 22);
+  }
+
+  // Draw Hero Transmog Weapon Aura
+  const transmog = state.player.transmog || 'default';
+  if(transmog !== 'default'){
+    const tData = TRANSMOG_CATALOG.find(t=>t.id===transmog);
+    if(tData){
+      ctx.strokeStyle = tData.color;
+      ctx.lineWidth = 3 + Math.sin(state.worldTime*8)*1.5;
+      ctx.beginPath();
+      ctx.arc(state.pos.x + PSIZE/2, state.pos.y + PSIZE/2, 14 + Math.cos(state.worldTime*4)*2, 0, Math.PI*2);
+      ctx.stroke();
+      ctx.lineWidth = 1;
+    }
+  }
+
+  // Draw Hero Golden Shimmer Aura if title equipped
+  if(state.player.activeTitle){
+    ctx.strokeStyle = "#e8b34d";
+    ctx.lineWidth = 2 + Math.sin(state.worldTime*5);
+    ctx.beginPath();
+    ctx.arc(state.pos.x + PSIZE/2, state.pos.y + PSIZE/2, 18, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.lineWidth = 1;
+  }
+
+  ctx.fillStyle = "#e8b34d";
+  ctx.fillRect(state.pos.x, state.pos.y, PSIZE, PSIZE);
+  ctx.strokeStyle = "#0d0e1a";
+  ctx.strokeRect(state.pos.x, state.pos.y, PSIZE, PSIZE);
+
+  if(state.player.activePet){
+    const petData = PETS_CATALOG.find(pt=>pt.id===state.player.activePet);
+    const px = state.pos.x - 14;
+    const py = state.pos.y + 4;
+    ctx.fillStyle = petData ? petData.color : "#8ec0ff";
+    ctx.beginPath();
+    ctx.arc(px + 6, py + 6, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.font = "10px Inter";
+    ctx.textAlign = "center";
+    ctx.fillText(petData ? petData.icon : "🐾", px + 6, py - 4);
+  }
+
+  if(state.player.activeMount){
+    const mData = MOUNTS_CATALOG.find(m=>m.id===state.player.activeMount);
+    const mx = state.pos.x + PSIZE + 2;
+    const my = state.pos.y + 4;
+    ctx.font = "14px Inter";
+    ctx.textAlign = "center";
+    ctx.fillText(mData ? mData.icon : "🐴", mx + 4, my + 10);
+  }
+
+  if(state.overworldSecrets){
+    state.overworldSecrets.forEach(node=>{
+      ctx.fillStyle = node.type === 'ore' ? '#e8b34d' : '#8ec0ff';
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, 8, 0, Math.PI*2);
+      ctx.fill();
+      ctx.font = "11px Inter";
+      ctx.textAlign = "center";
+      ctx.fillText(node.label, node.x, node.y - 12);
+    });
+  }
+}
+
+let lastTime = 0;
+function loop(timestamp){
+  if(!lastTime) lastTime = timestamp;
+  let dt = (timestamp - lastTime) / 1000;
+  lastTime = timestamp;
+  if(dt > 0.1) dt = 0.1;
+  update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* ================= UI HELPERS ================= */
+function toast(msg, color){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderColor = color || 'var(--violet-dim)';
+  t.style.color = color || 'var(--ink)';
+  t.classList.add('show');
+  clearTimeout(toast._h);
+  toast._h = setTimeout(()=> t.classList.remove('show'), 2400);
+}
+function openModal(html){
+  document.getElementById('modalRoot').innerHTML = `<div class="overlay" id="ovl"><div class="modal">${html}</div></div>`;
+}
+function closeModal(){ document.getElementById('modalRoot').innerHTML = ''; }
+function rankColor(r){ return `var(--rank-${r})`; }
+function requireOutOfCombat(){
+  if(state.combat){ toast('Finish or flee your current fight first.'); return false; }
+  return true;
+}
+
+function getItemName(item){
+  if(!item) return '';
+  return item.upgradeLevel ? `${item.name} +${item.upgradeLevel}` : item.name;
+}
+
+function getSetBonuses(p){
+  const counts = { vanguard: 0, shadowweaver: 0, archon: 0 };
+  if(p.equipment){
+    ['weapon', 'armor', 'accessory'].forEach(slot => {
+      const item = p.equipment[slot];
+      if(item && item.set && counts[item.set] !== undefined){
+        counts[item.set]++;
+      }
+    });
+  }
+  const active = [];
+  Object.keys(counts).forEach(setName => {
+    const count = counts[setName];
+    const def = ARTIFACT_SET_BONUSES[setName];
+    if(count >= 2) active.push({ set: setName, pieces: count, tier: count >= 4 ? 4 : 2, desc: count >= 4 ? def.fourPiece : def.twoPiece, name: def.name, color: def.color });
+  });
+  return { counts, active };
+}
+
+function getEffectiveStats(p){
+  const eff = {...p.stats};
+  Object.values(p.equipment).forEach(it=>{
+    if(!it) return;
+    const mult = 1 + (it.upgradeLevel||0)*0.15;
+    Object.entries(it.statBonus).forEach(([k,v])=>{ eff[k] = (eff[k]||0) + Math.round(v * mult); });
+  });
+  if(p.dungeonBuffs && p.dungeonBuffs.mightActive){
+    const cls = CLASSES[p.class];
+    if(cls && cls.atkStat) eff[cls.atkStat] += 4;
+  }
+  if(p.constellations && p.constellations.orion){
+    const cls = CLASSES[p.class];
+    if(cls && cls.atkStat) eff[cls.atkStat] += p.constellations.orion * 2;
+  }
+  if(p.paragonLevel){
+    const pMult = 1 + p.paragonLevel * 0.15;
+    Object.keys(eff).forEach(k => { eff[k] = Math.round(eff[k] * pMult); });
+  }
+  return eff;
+}
+function getGearMods(p){
+  let critBonus = 0; const xpBonuses = [];
+  Object.values(p.equipment).forEach(it=>{
+    if(!it) return;
+    if(it.critBonus) critBonus += it.critBonus;
+    if(it.passiveXp) xpBonuses.push(it.passiveXp);
+  });
+  return { critBonus, xpBonuses };
+}
+function getXpMultiplier(p, dungeonRank){
+  const { xpBonuses } = getGearMods(p);
+  let mult = 1;
+  xpBonuses.forEach(b=>{ if(b.scope==='all' || b.scope===dungeonRank) mult += b.mult; });
+  return mult;
+}
+function getCritChance(p, enemy){
+  const eff = getEffectiveStats(p);
+  const { critBonus } = getGearMods(p);
+  let chance = Math.min(60, 5 + eff.AGI + critBonus + (p.talentMods.critFlat||0));
+  if(enemy && enemy.trait === 'armored') chance = Math.round(chance/2);
+  return chance;
+}
+function getFocusMax(p){ return 3 + Math.floor(p.level/2) + (p.talentMods.focusFlat||0); }
+
+function recomputeDerived(p){
+  const eff = getEffectiveStats(p);
+  const base = 20 + (p.level-1)*4 + eff.VIT*3;
+  p.maxHp = Math.round(base * (1 + (p.talentMods.vitPct||0)));
+  if(p.hp > p.maxHp) p.hp = p.maxHp;
+  if(p.hp < 1) p.hp = 1;
+}
+function statBonusText(item){
+  const mult = 1 + (item.upgradeLevel||0)*0.15;
+  const parts = Object.entries(item.statBonus).map(([k,v])=> `${v>0?'+':''}${Math.round(v*mult)} ${k}`);
+  if(item.critBonus) parts.push(`+${item.critBonus}% crit`);
+  if(item.passiveXp) parts.push(`+${Math.round(item.passiveXp.mult*100)}% XP (${item.passiveXp.scope==='all'?'all dungeons':item.passiveXp.scope+'-Rank'})`);
+  return parts.join('  ·  ');
+}
+
+function refreshHud(){
+  const p = state.player;
+  document.getElementById('hudClass').textContent = p.class ? p.class : "Unawakened";
+  const rankEl = document.getElementById('hudRank');
+  if(p.rank){
+    rankEl.style.display = 'inline-block';
+    rankEl.textContent = p.rank + "-Rank";
+    rankEl.style.background = rankColor(p.rank) + "22";
+    rankEl.style.color = rankColor(p.rank);
+    rankEl.style.border = `1px solid ${rankColor(p.rank)}`;
+  }
+  document.getElementById('hudLevel').textContent = p.level;
+  document.getElementById('hudGold').textContent = p.gold;
+  document.getElementById('hpText').textContent = `${p.hp} / ${p.maxHp}`;
+  document.getElementById('hpBar').style.width = `${(p.hp/p.maxHp)*100}%`;
+  document.getElementById('xpText').textContent = `${p.xp} / ${p.xpToNext}`;
+  document.getElementById('xpBar').style.width = `${(p.xp/p.xpToNext)*100}%`;
+  document.getElementById('invCount').textContent = p.inventory.length;
+  document.getElementById('pointsBadge').textContent = p.statPoints>0 ? ` (${p.statPoints})` : '';
+  saveGame();
+}
+
+/* ================= SKILL TREE / UNIQUE SKILLS ================= */
+function findSkillNode(className, id){
+  const tree = CLASSES[className].tree;
+  for(const arr of Object.values(tree)){
+    const f = arr.find(n=>n.id===id);
+    if(f) return f;
+  }
+  const fused = FUSED_SKILLS.find(f=>f.id===id);
+  if(fused) return fused;
+  return UNIQUE_SKILLS.find(u=>u.id===id) || null;
+}
+function skillNameById(className, id){
+  const n = findSkillNode(className, id);
+  return n ? n.name : id;
+}
+function getUnlockedCombatSkills(p){
+  return p.unlockedSkills.map(id=>findSkillNode(p.class,id)).filter(Boolean);
+}
+function unknownUniqueSkills(p){
+  return UNIQUE_SKILLS.filter(u => !p.unlockedSkills.includes(u.id) && !p.inventory.some(it=>it.isTome && it.skillId===u.id));
+}
+function describeSkillNode(node){
+  switch(node.type){
+    case 'heal': return `Heal ${Math.round(node.healPct*100)}% max HP · ${node.cost} Focus`;
+    case 'shield': return `Raise a shield · ${node.cost} Focus`;
+    case 'crit_buff': return `Guarantee your next crit · ${node.cost} Focus`;
+    case 'evade': return `Dodge the next attack entirely · ${node.cost} Focus`;
+    case 'dot': return `Poison the enemy for ${node.dotTurns||3} turns · ${node.cost} Focus`;
+    case 'extra_turn': return `Deal damage and act again — no enemy turn · ${node.cost} Focus`;
+    default: return `${node.hits&&node.hits>1?`${node.hits}-hit `:''}Damage (x${node.mult})${node.executeThreshold?` · bonus below ${Math.round(node.executeThreshold*100)}% enemy HP`:''}${node.lifesteal?` · ${Math.round(node.lifesteal*100)}% lifesteal`:''} · ${node.cost} Focus`;
+  }
+}
+
+function openSkillTree(){
+  if(!requireOutOfCombat()) return;
+  const p = state.player;
+  if(!p.class){
+    openModal(`
+      <button class="close-x" onclick="closeModal()">✕</button>
+      <h2>Skill Tree</h2>
+      <p class="desc">You haven't awakened yet. Visit the Sanctuary first.</p>
+      <div class="modal-actions"><button onclick="closeModal()">Close</button></div>
+    `);
+    return;
+  }
+  const tree = CLASSES[p.class].tree;
+  const branchesHtml = Object.entries(tree).map(([branchName, nodes])=>{
+    const nodesHtml = nodes.map((node, idx)=>{
+      const unlocked = p.unlockedSkills.includes(node.id);
+      const prereqOk = idx===0 || p.unlockedSkills.includes(nodes[idx-1].id);
+      const levelOk = p.level >= node.unlockLevel;
+      const goldOk = p.gold >= node.goldCost;
+      let actionHtml;
+      if(unlocked){
+        actionHtml = `<span class="rank-pill" style="background:var(--good)22; color:var(--good); border:1px solid var(--good);">Unlocked</span>`;
+      } else if(!prereqOk){
+        actionHtml = `<button disabled>Locked</button>`;
+      } else {
+        actionHtml = `<button onclick="unlockSkillNode('${node.id}')" ${(levelOk&&goldOk)?'':'disabled'}>Unlock (Lv.${node.unlockLevel}, ${node.goldCost}g)</button>`;
+      }
+      return `
+        <div class="item-row">
+          <span><b>${node.name}</b><div style="color:var(--ink-dim); font-size:11px; margin-top:2px;">${describeSkillNode(node)}</div></span>
+          ${actionHtml}
+        </div>`;
+    }).join('');
+    return `<div class="branch-title">${branchName}</div>${nodesHtml}`;
+  }).join('');
+
+  const fusionRows = FUSED_SKILLS.map(f => {
+    const learned = p.unlockedSkills.includes(f.id);
+    const prereqMet = f.req.every(reqId => p.unlockedSkills.includes(reqId));
+    const canAfford = p.gold >= 50 && (p.materials.shadowEssence||0) >= 1;
+    let action;
+    if(learned){
+      action = `<span class="rank-pill" style="background:var(--gold)22; color:var(--gold); border:1px solid var(--gold)">Fused</span>`;
+    } else if(!prereqMet){
+      action = `<button disabled>Requires Prerequisites</button>`;
+    } else {
+      action = `<button onclick="fuseSkill('${f.id}')" ${canAfford ? '' : 'disabled'}>Fuse (50g, 1 Essence)</button>`;
+    }
+    return `
+      <div class="item-row">
+        <span><b>${f.name}</b> <span style="color:var(--gold); font-size:11px;">[Fused Skill]</span>
+        <div style="color:var(--ink-dim); font-size:11px; margin-top:2px;">${f.flavor} · Cost: ${f.cost} Focus</div></span>
+        ${action}
+      </div>`;
+  }).join('');
+
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h2>Skill Tree & Fusion Altar</h2>
+    <p class="desc">Unlock nodes with Level + Gold. Combine mastered prerequisite skills at the Fusion Altar below.</p>
+    ${branchesHtml}
+    <p class="branch-title">🔮 Skill Fusion Altar</p>
+    ${fusionRows}
+    <div class="modal-actions"><button class="primary" onclick="closeModal()">Close</button></div>
+  `);
+}
+
+function fuseSkill(fusedId){
+  const p = state.player;
+  const f = FUSED_SKILLS.find(item=>item.id===fusedId);
+  if(!f) return;
+  if(p.gold < 50 || (p.materials.shadowEssence||0) < 1) return;
+  p.gold -= 50;
+  p.materials.shadowEssence -= 1;
+  p.unlockedSkills.push(f.id);
+  refreshHud();
+  Sound.levelUp();
+  toast(`Fused new master skill: ${f.name}!`, 'var(--gold)');
+  openSkillTree();
+}
+
+/* ================= ESTATE & ACHIEVEMENTS ================= */
+function upgradeBuilding(buildingId){
+  const p = state.player;
+  if(!p.buildingLevels) p.buildingLevels = { sanctuary: 1, guild: 1, merchant: 1, forge: 1 };
+  const currentLvl = p.buildingLevels[buildingId] || 1;
+  const goldCost = currentLvl * 90;
+  const oreCost = currentLvl * 5;
+  
+  if(p.gold < goldCost || (p.materials.ironOre||0) < oreCost) return;
+  p.gold -= goldCost;
+  p.materials.ironOre -= oreCost;
+  p.buildingLevels[buildingId] = currentLvl + 1;
+  
+  recomputeDerived(p);
+  p.hp = p.maxHp;
+  refreshHud();
+  Sound.levelUp();
+  toast(`Upgraded ${buildingId.toUpperCase()} to Level ${currentLvl+1}!`, 'var(--gold)');
+  handleEnter(buildingId);
+}
+
+function checkAchievement(id){
+  const p = state.player;
+  if(!p.achievements) p.achievements = {};
+  if(p.achievements[id]) return;
+  const ach = ACHIEVEMENTS_CATALOG.find(a=>a.id===id);
+  if(!ach) return;
+  p.achievements[id] = true;
+  Sound.loot();
+  toast(`🏆 Achievement Unlocked: ${ach.name}! Title: ${ach.title}`, 'var(--gold)');
+}
+
+function openAchievements(){
+  const p = state.player;
+  const achList = ACHIEVEMENTS_CATALOG.map(a => {
+    const unlocked = !!(p.achievements && p.achievements[a.id]);
+    const isEquipped = p.activeTitle === a.title;
+    return `
+      <div class="item-row">
+        <span><b>${a.name}</b> ${unlocked ? `<span style="color:var(--gold);">[${a.title}]</span>` : ''}
+        <div style="color:var(--ink-dim); font-size:11px; margin-top:2px;">${a.desc}</div></span>
+        ${unlocked 
+          ? (isEquipped 
+              ? `<span class="rank-pill" style="background:var(--gold)22; color:var(--gold); border:1px solid var(--gold)">Equipped</span>`
+              : `<button onclick="equipTitle('${a.title}')">Equip Title</button>`)
+          : `<span class="rank-pill" style="background:var(--rank-D)22; color:var(--rank-D); border:1px solid var(--rank-D)">Locked</span>`}
+      </div>`;
+  }).join('');
+
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h2>🏆 Achievement Codex</h2>
+    <p class="desc">Unlock achievements to earn permanent stat titles & shimmering hero golden aura!</p>
+    <div>${achList}</div>
+    <div class="modal-actions">
+      ${p.activeTitle ? `<button class="danger" onclick="equipTitle(null)">Unequip Title</button>` : ''}
+      <button class="primary" onclick="closeModal()">Close</button>
+    </div>
+  `);
+}
+
+function equipTitle(title){
+  state.player.activeTitle = title;
+  refreshHud();
+  Sound.click();
+  toast(title ? `Equipped Title: ${title}!` : `Unequipped title.`);
+  openAchievements();
+}
+
+function startExpedition(type){
+  const p = state.player;
+  if(p.expedition) return;
+  let durationSec = 60, name = "Ancient Ruins Search", gold = 100, ore = 3, ess = 0;
+  if(type === 'shaft') { durationSec = 120; name = "Shadow Shaft Mining"; gold = 250; ess = 2; }
+  else if(type === 'spire') { durationSec = 180; name = "Spire Away Mission"; gold = 450; ess = 4; }
+
+  p.expedition = { type, name, endTime: Date.now() + durationSec * 1000, rewardGold: gold, rewardOre: ore, rewardEss: ess };
+  refreshHud();
+  Sound.click();
+  toast(`Dispatched Squad on ${name}!`, 'var(--violet)');
+  openGuild();
+}
+
+function claimExpedition(){
+  const p = state.player;
+  if(!p.expedition || Date.now() < p.expedition.endTime) return;
+  const exp = p.expedition;
+  p.gold += exp.rewardGold;
+  if(exp.rewardOre) p.materials.ironOre = (p.materials.ironOre||0) + exp.rewardOre;
+  if(exp.rewardEss) p.materials.shadowEssence = (p.materials.shadowEssence||0) + exp.rewardEss;
+  p.expedition = null;
+  refreshHud();
+  Sound.loot();
+  toast(`Expedition Returned! +${exp.rewardGold} Gold, +${exp.rewardOre||0} Ore, +${exp.rewardEss||0} Essence!`, 'var(--gold)');
+  openGuild();
+}
+
+function startRoamingBossCombat(){
+  const p = state.player;
+  const bossDungeon = {
+    rank: 'S', name: 'Blood Moon Encounter', rooms: 1, tierMult: 2.2,
+    xpMult: 2.5, prefix: 'Crimson', bossName: 'Crimson Fiend 🩸', bossTrait: 'vicious'
+  };
+  state.combat = {
+    dungeon: bossDungeon, roomIndex: 0, totalRooms: 1,
+    enemy: { name: 'Crimson Fiend 🩸', maxHp: 150, hp: 150, atk: 12, def: 3, xp: 50, isBoss: true, trait: 'vicious', element: 'Shadow' },
+    focus: getFocusMax(p), log: [], secondChanceUsed: false
+  };
+  closeModal();
+  renderCombat(`The Blood Moon surges! A Crimson Fiend strikes from the crimson mist!`);
+}
+
+function startCalamityRaid(){
+  const p = state.player;
+  const raidDungeon = {
+    rank: 'S', name: 'Calamity Raid', rooms: 1, tierMult: 3.0,
+    xpMult: 3.0, prefix: 'Calamity', bossName: 'Calamity Dragon Ignis 🐉', bossTrait: 'vicious', isRaid: true
+  };
+  state.combat = {
+    dungeon: raidDungeon, roomIndex: 0, totalRooms: 1,
+    enemy: { name: 'Calamity Dragon Ignis 🐉', maxHp: 600, hp: 600, atk: 16, def: 4, xp: 120, isBoss: true, trait: 'vicious', element: 'Fire' },
+    focus: getFocusMax(p), log: [], secondChanceUsed: false
+  };
+  closeModal();
+  renderCombat(`The earth trembles as Calamity Dragon Ignis descends upon the battleground!`);
+}
+
+function unlockSkillNode(id){
+  const p = state.player;
+  const tree = CLASSES[p.class].tree;
+  let branchArr = null, idx = -1;
+  for(const arr of Object.values(tree)){
+    const i = arr.findIndex(n=>n.id===id);
+    if(i !== -1){ branchArr = arr; idx = i; break; }
+  }
+  if(!branchArr) return;
+  const node = branchArr[idx];
+  if(idx > 0 && !p.unlockedSkills.includes(branchArr[idx-1].id)) return;
+  if(p.level < node.unlockLevel || p.gold < node.goldCost) return;
+  p.gold -= node.goldCost;
+  p.unlockedSkills.push(node.id);
+  refreshHud();
+  toast(`Skill unlocked: ${node.name}!`, 'var(--violet)');
+  openSkillTree();
+}
+
+function learnTome(itemId){
+  const p = state.player;
+  const idx = p.inventory.findIndex(it=>it.id===itemId);
+  if(idx === -1) return;
+  const tome = p.inventory[idx];
+  if(p.unlockedSkills.includes(tome.skillId)){
+    p.inventory.splice(idx,1);
+    refreshHud();
+    openInventory();
+    toast('You already know this skill.');
+    return;
+  }
+  p.unlockedSkills.push(tome.skillId);
+  p.inventory.splice(idx,1);
+  refreshHud();
+  openInventory();
+  const uniq = UNIQUE_SKILLS.find(u=>u.id===tome.skillId);
+  toast(`Learned unique skill: ${uniq ? uniq.name : ''}!`, 'var(--gold)');
+}
+
+/* ================= TALENTS ================= */
+let pendingTalentCallback = null;
+function maybeShowPendingTalent(callback){
+  const p = state.player;
+  if(p.pendingTalents && p.pendingTalents.length > 0){
+    const level = p.pendingTalents.shift();
+    showTalentChoice(level, callback);
+  } else {
+    callback();
+  }
+}
+function showTalentChoice(level, callback){
+  const tier = TALENT_TIERS.find(t=>t.level===level);
+  if(!tier){ callback(); return; }
+  pendingTalentCallback = callback;
+  const optsHtml = tier.options.map(o=>`
+    <div class="choice-card" onclick="chooseTalent(${level}, '${o.id}')">
+      <div class="name">${o.name}</div>
+      <div class="flavor">${o.desc}</div>
+    </div>`).join('');
+  openModal(`
+    <h2>Talent Unlocked — Level ${level}</h2>
+    <p class="desc">Choose a permanent boon. This choice is final.</p>
+    <div class="choice-row">${optsHtml}</div>
+  `);
+}
+function chooseTalent(level, optId){
+  const p = state.player;
+  const tier = TALENT_TIERS.find(t=>t.level===level);
+  const opt = tier.options.find(o=>o.id===optId);
+  opt.apply(p);
+  p.talentsChosen[level] = optId;
+  recomputeDerived(p);
+  refreshHud();
+  toast(`Talent chosen: ${opt.name}`, 'var(--gold)');
+  const cb = pendingTalentCallback;
+  pendingTalentCallback = null;
+  if(cb) cb(); else closeModal();
+}
+
+/* ================= BUILDING INTERACTIONS ================= */
+function handleEnter(id){
+  if(id === 'sanctuary') openSanctuary();
+  else if(id === 'guild') openGuild();
+  else if(id === 'merchant') openMerchant();
+  else if(id === 'forge') openForge();
+  else if(id === 'arena') openArena();
+  else if(id === 'dungeon') openDungeonGate();
+  else if(id === 'spire') openSpire();
+  else if(id === 'pond') openPond();
+  else if(id === 'casino') openCasino();
+  else if(id === 'portal') openZonePortal();
+  else if(id === 'stables') openMountStables();
+  else if(id === 'alchemy') openAlchemyLab();
+}
+
+/* ---------- ALCHEMY LAB & BREWING ---------- */
+function openAlchemyLab(){
+  const p = state.player;
+  const herbs = p.herbs || { sunbloom: 0, frostlotus: 0, voidshard: 0 };
+  const brewRows = BREWS_CATALOG.map(b => {
+    let canAfford = true;
+    const reqText = Object.entries(b.cost).map(([hKey, hQty]) => {
+      if((herbs[hKey]||0) < hQty) canAfford = false;
+      const hData = HERBS_CATALOG.find(x=>x.id===hKey);
+      return `${hQty} ${hData ? hData.name : hKey}`;
+    }).join(', ');
+
+    return `
+      <div class="item-row">
+        <span>${b.icon} <b>${b.name}</b>
+        <div style="color:var(--ink-dim); font-size:11px; margin-top:2px;">${b.desc}</div></span>
+        <button onclick="brewPotion('${b.id}')" ${canAfford?'':'disabled'}>Brew (${reqText})</button>
+      </div>`;
+  }).join('');
+
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h2>🧪 Alchemy Lab & Potion Brewing</h2>
+    <p class="desc">Distill wild overworld herbs into potent battle elixirs and tactical weapon coatings.</p>
+    <p class="desc" style="margin-bottom:12px;">Sunbloom: <b>${herbs.sunbloom||0}</b> · Frost Lotus: <b>${herbs.frostlotus||0}</b> · Void Shards: <b>${herbs.voidshard||0}</b></p>
+    <div>${brewRows}</div>
+    <div class="modal-actions"><button onclick="closeModal()">Close Lab</button></div>
+  `);
+}
+
+function brewPotion(id){
+  const p = state.player;
+  const b = BREWS_CATALOG.find(x=>x.id===id);
+  if(!b) return;
+  const herbs = p.herbs || {};
+  for(const [hKey, hQty] of Object.entries(b.cost)){
+    if((herbs[hKey]||0) < hQty) return;
+  }
+  for(const [hKey, hQty] of Object.entries(b.cost)){
+    p.herbs[hKey] -= hQty;
+  }
+
+  if(id === 'astralBrew'){
+    p.xp += 300;
+    toast('Drank Astral XP Brew! +300 XP gained!', 'var(--gold)');
+    checkLevelUp(p);
+  } else {
+    toast(`Brewed ${b.name}! Elixir added to inventory.`, 'var(--violet)');
+  }
+  Sound.magic();
+  refreshHud();
+  openAlchemyLab();
+}
+
+/* ---------- DRAGON HATCHERY ---------- */
+function openDragonHatchery(){
+  const p = state.player;
+  const mats = p.materials || {};
+  const dragonCards = DRAGONS_CATALOG.map(d => {
+    const owned = (p.dragons||[]).includes(d.id);
+    const active = p.activeDragon === d.id;
+    const canAfford = p.gold >= d.cost.gold && (mats.monsterCore||0) >= d.cost.monsterCore;
+    return `
+      <div class="choice-card" style="${active?'border-color:var(--gold)':''}">
+        <div class="icon">${d.icon}</div>
+        <div class="name">${d.name}</div>
+        <div class="flavor">${d.desc}</div>
+        <div style="margin-top:8px;">
+          ${active 
+            ? `<span class="rank-pill" style="background:var(--gold)22; color:var(--gold); border:1px solid var(--gold)">Active Dragon</span>`
+            : owned 
+              ? `<button onclick="equipDragon('${d.id}')">Equip Dragon</button>`
+              : `<button onclick="hatchDragon('${d.id}')" ${canAfford?'':'disabled'}>Hatch (${d.cost.gold}g, ${d.cost.monsterCore} Core)</button>`}
+        </div>
+      </div>`;
+  }).join('');
+
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h2>🐉 Dragon Hatchery & Evolution</h2>
+    <p class="desc">Incubate legendary dragon eggs and command ferocious drakes in battle.</p>
+    <div class="choice-row">${dragonCards}</div>
+    <div class="modal-actions"><button onclick="openSanctuary()">Back to Sanctuary</button></div>
+  `);
+}
+
+function hatchDragon(id){
+  const p = state.player;
+  const d = DRAGONS_CATALOG.find(x=>x.id===id);
+  if(!d) return;
+  const mats = p.materials || {};
+  if(p.gold < d.cost.gold || (mats.monsterCore||0) < d.cost.monsterCore) return;
+
+  p.gold -= d.cost.gold;
+  p.materials.monsterCore -= d.cost.monsterCore;
+  if(!p.dragons) p.dragons = [];
+  p.dragons.push(id);
+  p.activeDragon = id;
+  refreshHud();
+  Sound.levelUp();
+  toast(`Hatched ${d.name}! Dragon companion ready!`, 'var(--gold)');
+  openDragonHatchery();
+}
+
+function equipDragon(id){
+  state.player.activeDragon = id;
+  refreshHud();
+  Sound.click();
+  toast(`Equipped dragon companion!`, 'var(--gold)');
+  openDragonHatchery();
+}
+
+/* ---------- GUILD OUTPOST SIEGE DEFENSE ---------- */
+function startOutpostDefense(){
+  const p = state.player;
+  const defenseDungeon = {
+    rank: 'A', name: 'Outpost Siege Defense', rooms: 5, tierMult: 2.8,
+    xpMult: 2.5, prefix: 'Siege', bossName: 'Siege Warlord Vrax 👹', bossTrait: 'vicious', isDefense: true
+  };
+  state.combat = {
+    dungeon: defenseDungeon, roomIndex: 0, totalRooms: 5,
+    enemy: { name: 'Siege Vanguard 🛡️', maxHp: 120, hp: 120, atk: 11, def: 3, xp: 45, trait: 'none', element: 'Fire' },
+    focus: getFocusMax(p), log: [], secondChanceUsed: false
+  };
+  closeModal();
+  renderCombat(`The alarm bell rings! Enemy siege forces descend upon Sunlit Haven Outpost!`);
+}
+
+/* ---------- PARAGON PRESTIGE ASCENSION ---------- */
+function prestigeAscend(){
+  const p = state.player;
+  if(p.level < 30 || p.rank !== 'S') return;
+  if(!confirm("Are you ready to undergo Paragon Prestige Ascension? Your level will reset to 1 in exchange for permanent Paragon Star Badges (+15% stat boost per Paragon Level)!")) return;
+
+  p.paragonLevel = (p.paragonLevel || 0) + 1;
+  p.level = 1;
+  p.xp = 0;
+  p.xpToNext = 20;
+  p.statPoints = 0;
+  p.activeTitle = 'Paragon Sovereign';
+  checkAchievement('paragonMaster');
+  recomputeDerived(p);
+  p.hp = p.maxHp;
+  refreshHud();
+  Sound.levelUp();
+  openModal(`
+    <h2>🌟 PARAGON ASCENSION COMPLETE!</h2>
+    <p class="desc" style="text-align:center; font-size:16px; margin:20px 0;">
+      You have ascended to <b>Paragon Level ${p.paragonLevel}</b>! <br>
+      Earned Title: <span style="color:var(--gold);">Paragon Sovereign</span> (+${p.paragonLevel*15}% Global Stat Multiplier).
+    </p>
+    <div class="modal-actions"><button class="primary" onclick="closeModal()">Claim Paragon Crown</button></div>
+  `);
+}
+
+/* ---------- MOUNT STABLES ---------- */
+function openMountStables(){
+  const p = state.player;
+  const mountCards = MOUNTS_CATALOG.map(m => {
+    const owned = (p.mounts||[]).includes(m.id);
+    const active = p.activeMount === m.id;
+    return `
+      <div class="choice-card" style="${active?'border-color:var(--gold)':''}">
+        <div class="icon">${m.icon}</div>
+        <div class="name">${m.name}</div>
+        <div class="flavor">${m.desc}</div>
+        <div style="margin-top:8px;">
+          ${active 
+            ? `<span class="rank-pill" style="background:var(--gold)22; color:var(--gold); border:1px solid var(--gold)">Active Mount</span>`
+            : owned 
+              ? `<button onclick="equipMount('${m.id}')">Equip Mount</button>`
+              : `<button onclick="adoptMount('${m.id}')" ${p.gold<m.cost?'disabled':''}>Tame (${m.cost}g)</button>`}
+        </div>
+      </div>`;
+  }).join('');
+
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h2>🐴 Mount Stables & Beast Mastery</h2>
+    <p class="desc">Tame majestic beasts to travel across overworld realms at breakneck speeds and unlock mounted passive combat boons.</p>
+    <div class="choice-row">${mountCards}</div>
+    <div class="modal-actions"><button onclick="closeModal()">Close Stables</button></div>
+  `);
+}
+
+function adoptMount(id){
+  const p = state.player;
+  const m = MOUNTS_CATALOG.find(x=>x.id===id);
+  if(!m || p.gold < m.cost) return;
+  p.gold -= m.cost;
+  if(!p.mounts) p.mounts = [];
+  p.mounts.push(id);
+  p.activeMount = id;
+  recomputeDerived(p);
+  refreshHud();
+  Sound.loot();
+  toast(`Tamed ${m.name}! Mount equipped.`, 'var(--gold)');
+  openMountStables();
+}
+
+function equipMount(id){
+  state.player.activeMount = id;
+  recomputeDerived(state.player);
+  refreshHud();
+  Sound.click();
+  toast(`Mounted beast activated!`, 'var(--gold)');
+  openMountStables();
+}
+
+/* ---------- ROGUELIKE TAROT DRAFT ---------- */
+let tarotDraftCallback = null;
+function showTarotDraftModal(callback){
+  tarotDraftCallback = callback;
+  const shuffled = [...TAROT_CARDS].sort(()=>0.5 - Math.random()).slice(0,3);
+  const cardsHtml = shuffled.map(t => `
+    <div class="choice-card" onclick="chooseTarotCard('${t.id}')">
+      <div class="icon">${t.icon}</div>
+      <div class="name">${t.name}</div>
+      <div class="flavor">${t.desc}</div>
+    </div>
+  `).join('');
+
+  openModal(`
+    <h2>🃏 Arcane Tarot Draft</h2>
+    <p class="desc">Choose a celestial Tarot Blessing for this dungeon floor:</p>
+    <div class="choice-row">${cardsHtml}</div>
+  `);
+}
+
+function chooseTarotCard(id){
+  const c = state.combat;
+  if(c){
+    if(!c.tarotCards) c.tarotCards = [];
+    c.tarotCards.push(id);
+    const cardData = TAROT_CARDS.find(t=>t.id===id);
+    toast(`Tarot Blessing active: ${cardData ? cardData.name : ''}!`, 'var(--gold)');
+  }
+  const cb = tarotDraftCallback;
+  tarotDraftCallback = null;
+  if(cb) cb(); else closeModal();
+}
+
+/* ---------- MYTHIC RUNES ---------- */
+function openInscribeRunes(){
+  const p = state.player;
+  const mats = p.materials || {};
+  const runeRows = RUNES_CATALOG.map(r => {
+    const owned = p.runes ? p.runes[r.id]||0 : 0;
+    const canAfford = (mats.shadowEssence||0) >= r.cost.shadowEssence && (mats.monsterCore||0) >= r.cost.monsterCore;
+    return `
+      <div class="item-row">
+        <span>${r.icon} <b>${r.name}</b> <span style="color:var(--gold); font-size:11px;">(Owned: ${owned})</span>
+        <div style="color:var(--ink-dim); font-size:11px; margin-top:2px;">${r.desc}</div></span>
+        <button onclick="inscribeRune('${r.id}')" ${canAfford?'':'disabled'}>Inscribe (${r.cost.shadowEssence} Ess, ${r.cost.monsterCore} Core)</button>
+      </div>`;
+  }).join('');
+
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h2>🔮 Mythic Runes & Inscription Crafter</h2>
+    <p class="desc">Carve ancient mythic runes to embed reactive spell triggers into your combat gear.</p>
+    <p class="desc" style="margin-bottom:12px;">Essence: <b>${mats.shadowEssence||0}</b> · Monster Cores: <b>${mats.monsterCore||0}</b></p>
+    <div>${runeRows}</div>
+    <div class="modal-actions"><button onclick="openForge()">Back to Forge</button></div>
+  `);
+}
+
+function inscribeRune(id){
+  const p = state.player;
+  const r = RUNES_CATALOG.find(x=>x.id===id);
+  if(!r) return;
+  const mats = p.materials || {};
+  if((mats.shadowEssence||0) < r.cost.shadowEssence || (mats.monsterCore||0) < r.cost.monsterCore) return;
+
+  p.materials.shadowEssence -= r.cost.shadowEssence;
+  p.materials.monsterCore -= r.cost.monsterCore;
+  if(!p.runes) p.runes = {};
+  p.runes[id] = (p.runes[id]||0) + 1;
+  Sound.magic();
+  toast(`Inscribed ${r.name}!`, 'var(--violet)');
+  openInscribeRunes();
+}
+
+/* ---------- ANCIENT STONE COLOSSUS RAID BOSS ---------- */
+function startColossusBossCombat(){
+  const p = state.player;
+  const colossusDungeon = {
+    rank: 'S', name: 'Colossus Awakening', rooms: 1, tierMult: 4.5,
+    xpMult: 4.0, prefix: 'Colossus', bossName: 'Ancient Stone Colossus 🗿', bossTrait: 'armored', isRaid: true
+  };
+  state.combat = {
+    dungeon: colossusDungeon, roomIndex: 0, totalRooms: 1,
+    enemy: { name: 'Ancient Stone Colossus 🗿', maxHp: 500, hp: 500, atk: 18, def: 8, xp: 200, isBoss: true, trait: 'armored', element: 'Holy' },
+    focus: getFocusMax(p), log: [], secondChanceUsed: false
+  };
+  closeModal();
+  renderCombat(`The mountain cracks open! The Ancient Stone Colossus awakens with a roaring seismic tremor!`);
+}
+
+/* ---------- MULTI-ZONE REALM PORTAL ---------- */
+const ZONES = {
+  sunlit: { name: 'Sunlit Haven Capital', icon: '🏰', color: '#10132a', terrainBg: '#0f1423', bonus: 'Standard Capital Realm' },
+  ashen: { name: 'Ashen Wastelands', icon: '🔥', color: '#241014', terrainBg: '#1e0c10', bonus: '+25% Bonus XP from Dungeons' },
+  frost: { name: 'Frost Peak Fortress', icon: '❄️', color: '#0d1d2a', terrainBg: '#0a1724', bonus: '+25% Bonus Gold from Dungeons' }
+};
+
+function openZonePortal(){
+  const p = state.player;
+  const current = p.currentZone || 'sunlit';
+  const zoneCards = Object.entries(ZONES).map(([id, z]) => `
+    <div class="choice-card" style="${current===id ? 'border-color:var(--gold)' : ''}">
+      <div class="icon">${z.icon}</div>
+      <div class="name">${z.name}</div>
+      <div class="flavor">${z.bonus}</div>
+      <div style="margin-top:8px;">
+        ${current===id 
+          ? `<span class="rank-pill" style="background:var(--gold)22; color:var(--gold); border:1px solid var(--gold)">Current Realm</span>` 
+          : `<button class="primary" onclick="travelToZone('${id}')">Travel Portal</button>`}
+      </div>
+    </div>
+  `).join('');
+
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h2>🌐 Realm Portal — Multi-Zone Travel</h2>
+    <p class="desc">Step through the dimensional portal to explore distinct overworld zones with unique monster modifiers & bonus yields.</p>
+    <div class="choice-row">${zoneCards}</div>
+    <div class="modal-actions"><button onclick="closeModal()">Close</button></div>
+  `);
+}
+
+function travelToZone(zoneId){
+  const p = state.player;
+  p.currentZone = zoneId;
+  Sound.magic();
+  toast(`Traveled through portal to ${ZONES[zoneId].name}!`, 'var(--violet)');
+  closeModal();
+}
+
+/* ---------- CELESTIAL CONSTELLATIONS ---------- */
+const CONSTELLATIONS_CATALOG = {
+  orion: { name: 'Orion Star Tree', icon: '🏹', desc: '+10% Attack Damage per node tier', max: 3, coreCost: 1, essCost: 2 },
+  ursa: { name: 'Ursa Major Tree', icon: '🐻', desc: '+20 Max HP per node tier', max: 3, coreCost: 1, essCost: 2 },
+  phoenix: { name: 'Phoenix Star Tree', icon: '🔥', desc: 'Auto-Revive 1x with 30% HP per dungeon at max tier', max: 3, coreCost: 2, essCost: 3 }
+};
+
+function openConstellations(){
+  const p = state.player;
+  if(!p.constellations) p.constellations = { orion:0, ursa:0, phoenix:0 };
+  const mats = p.materials || {};
+  const cards = Object.entries(CONSTELLATIONS_CATALOG).map(([id, c]) => {
+    const lvl = p.constellations[id] || 0;
+    const canAfford = (mats.monsterCore||0) >= c.coreCost && (mats.shadowEssence||0) >= c.essCost;
+    return `
+      <div class="choice-card" style="flex:1; min-width:140px;">
+        <div class="icon">${c.icon}</div>
+        <div class="name">${c.name} (Tier ${lvl}/${c.max})</div>
+        <div class="flavor">${c.desc}</div>
+        <div style="margin-top:8px;">
+          ${lvl >= c.max 
+            ? `<span class="rank-pill" style="background:var(--gold)22; color:var(--gold); border:1px solid var(--gold)">🌟 Max Star Tier</span>` 
+            : `<button onclick="upgradeConstellation('${id}')" ${canAfford?'':'disabled'}>Attune Star (${c.coreCost} Core, ${c.essCost} Ess)</button>`}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h2>⭐ Celestial Constellation Stargazing</h2>
+    <p class="desc">Channel Monster Cores & Shadow Essence into celestial stars to unlock permanent passive cosmic boons.</p>
+    <p class="desc" style="margin-bottom:12px;">Cores: <b>${mats.monsterCore||0}</b> · Essence: <b>${mats.shadowEssence||0}</b></p>
+    <div class="choice-row">${cards}</div>
+    <div class="modal-actions"><button onclick="closeModal()">Close</button></div>
+  `);
+}
+
+function upgradeConstellation(id){
+  const p = state.player;
+  const c = CONSTELLATIONS_CATALOG[id];
+  if(!c) return;
+  if(!p.constellations) p.constellations = { orion:0, ursa:0, phoenix:0 };
+  const lvl = p.constellations[id] || 0;
+  if(lvl >= c.max) return;
+
+  const mats = p.materials || {};
+  if((mats.monsterCore||0) < c.coreCost || (mats.shadowEssence||0) < c.essCost) return;
+
+  p.materials.monsterCore -= c.coreCost;
+  p.materials.shadowEssence -= c.essCost;
+  p.constellations[id] = lvl + 1;
+  recomputeDerived(p);
+  refreshHud();
+  Sound.magic();
+  toast(`Attuned ${c.name} Tier ${lvl+1}!`, 'var(--gold)');
+  openConstellations();
+}
+
+/* ---------- WEAPON TRANSMOG & GLOW CRAFTER ---------- */
+const TRANSMOG_CATALOG = [
+  { id: 'default', name: 'Classic Silver Blade', icon: '⚔️', color: '#c0c0c0', desc: 'Standard refined steel shine.' },
+  { id: 'fire', name: 'Fiery Crimson Blade', icon: '🔥', color: '#e2555f', desc: 'Radiates intense hellfire particles.' },
+  { id: 'frost', name: 'Frostbite Azure Blade', icon: '❄️', color: '#4cae6d', desc: 'Emits a chilling frost aura.' },
+  { id: 'shadow', name: 'Void Shadow Smoke', icon: '🌑', color: '#a64ce8', desc: 'Wreathed in ominous dark shadows.' },
+  { id: 'gold', name: 'Celestial Sovereign Glow', icon: '🌟', color: '#e8b34d', desc: 'Shimmers with divine golden light.' }
+];
+
+function openTransmog(){
+  const p = state.player;
+  const current = p.transmog || 'default';
+  const cards = TRANSMOG_CATALOG.map(t => `
+    <div class="choice-card" style="${current===t.id ? 'border-color:var(--gold)' : ''}">
+      <div class="icon">${t.icon}</div>
+      <div class="name">${t.name}</div>
+      <div class="flavor">${t.desc}</div>
+      <div style="margin-top:8px;">
+        ${current===t.id 
+          ? `<span class="rank-pill" style="background:var(--gold)22; color:var(--gold); border:1px solid var(--gold)">Active Glow</span>` 
+          : `<button onclick="applyTransmog('${t.id}')">Apply Aura</button>`}
+      </div>
+    </div>
+  `).join('');
+
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h2>🎨 Weapon Transmog & Hero Glow Crafter</h2>
+    <p class="desc">Customize your hero's weapon aura and combat particle trail on the overworld map.</p>
+    <div class="choice-row">${cards}</div>
+    <div class="modal-actions"><button onclick="openForge()">Back to Forge</button></div>
+  `);
+}
+
+function applyTransmog(id){
+  state.player.transmog = id;
+  Sound.magic();
+  toast(`Applied weapon aura transmog!`, 'var(--gold)');
+  openTransmog();
+}
+
+/* ---------- BLACKSMITH FORGE & CRAFTING ---------- */
+function openForge(){
+  const p = state.player;
+  const forgeLvl = (p.buildingLevels && p.buildingLevels.forge) || 1;
+  const mats = p.materials || { ironOre: 0, shadowEssence: 0, monsterCore: 0 };
+  
+  const allGear = [
+    ...Object.values(p.equipment).filter(Boolean),
+    ...p.inventory.filter(it => !it.isTome)
+  ];
+
+  const gearRows = allGear.length ? allGear.map(it => {
+    const level = it.upgradeLevel || 0;
+    const upgradeCostGold = (level + 1) * 40;
+    const upgradeCostOre = (level + 1) * 2;
+    const canUpgrade = level < 5 && p.gold >= upgradeCostGold && mats.ironOre >= upgradeCostOre;
+    const gemText = it.socketedGem ? ` Gem: ${it.socketedGem.icon} ${it.socketedGem.name}` : '';
+    const setTag = it.set ? ` <span class="rank-pill" style="font-size:10px; background:${ARTIFACT_SET_BONUSES[it.set].color}22; color:${ARTIFACT_SET_BONUSES[it.set].color}; border:1px solid ${ARTIFACT_SET_BONUSES[it.set].color};">${ARTIFACT_SET_BONUSES[it.set].name} Set</span>` : '';
+
+    return `
+      <div class="item-row">
+        <span><b>${it.name} ${level > 0 ? `+${level}` : ''}</b> ${setTag}
+          <div style="color:var(--ink-dim); font-size:11px; margin-top:2px;">${statBonusText(it)} ${gemText}</div>
+        </span>
+        <div style="display:flex; gap:4px;">
+          ${level < 5 
+            ? `<button onclick="upgradeGear(${it.id})" ${canUpgrade?'':'disabled'}>Upgrade (${upgradeCostGold}g, ${upgradeCostOre} Ore)</button>`
+            : `<span class="rank-pill" style="background:var(--gold)22; color:var(--gold); border:1px solid var(--gold)">Max +5</span>`}
+          ${it.socketedGem 
+            ? `<button onclick="unsocketGem(${it.id})">Unsocket</button>`
+            : `<button onclick="showSocketMenu(${it.id})">Socket Gem</button>`}
+          <button class="danger" onclick="dismantleGear(${it.id})">Dismantle</button>
+        </div>
+      </div>`;
+  }).join('') : `<div class="empty-note">No gear available in equipment or inventory.</div>`;
+
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h2>⚒️ The Blacksmith Forge (Lv ${forgeLvl})</h2>
+    <p class="desc">Gold: <b>${p.gold}</b> · Ore: <b>${mats.ironOre||0}</b> · Essence: <b>${mats.shadowEssence||0}</b> · Cores: <b>${mats.monsterCore||0}</b></p>
+    <div style="display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;">
+      <button class="primary" onclick="openTransmog()">🎨 Weapon Transmog & Glow</button>
+      <button onclick="openInscribeRunes()">🔮 Mythic Runes</button>
+      <button onclick="upgradeBuilding('forge')">Upgrade Forge (${forgeLvl*100}g, ${forgeLvl*5} Ore)</button>
+    </div>
+    <p class="branch-title">⚔️ Gear Upgrades & Gem Sockets</p>
+    <div>${gearRows}</div>
+    <div class="modal-actions"><button onclick="closeModal()">Leave Forge</button></div>
+  `);
+}
+
+function upgradeGear(itemId){
+  const p = state.player;
+  const mats = p.materials || {};
+  let item = Object.values(p.equipment).find(it => it && it.id === itemId);
+  if(!item) item = p.inventory.find(it => it.id === itemId);
+  if(!item) return;
+
+  const level = item.upgradeLevel || 0;
+  if(level >= 5) return;
+  const costGold = (level + 1) * 40;
+  const costOre = (level + 1) * 2;
+  if(p.gold < costGold || (mats.ironOre||0) < costOre) return;
+
+  p.gold -= costGold;
+  p.materials.ironOre -= costOre;
+  item.upgradeLevel = level + 1;
+  
+  if(item.statBonus){
+    Object.keys(item.statBonus).forEach(k => {
+      item.statBonus[k] = Math.ceil(item.statBonus[k] * 1.15);
+    });
+  }
+
+  recomputeDerived(p);
+  refreshHud();
+  Sound.loot();
+  toast(`Upgraded ${item.name} to +${item.upgradeLevel}!`, 'var(--gold)');
+  openForge();
+}
+
+function dismantleGear(itemId){
+  const p = state.player;
+  let idx = p.inventory.findIndex(it => it.id === itemId);
+  let item = p.inventory[idx];
+  if(!item){
+    Object.entries(p.equipment).forEach(([slot, it]) => {
+      if(it && it.id === itemId){
+        item = it;
+        p.equipment[slot] = null;
+      }
+    });
+  } else {
+    p.inventory.splice(idx, 1);
+  }
+  if(!item) return;
+
+  const oreGained = item.rank === 'S' ? 5 : item.rank === 'A' ? 3 : 2;
+  if(!p.materials) p.materials = { ironOre: 0, shadowEssence: 0, monsterCore: 0 };
+  p.materials.ironOre += oreGained;
+
+  recomputeDerived(p);
+  refreshHud();
+  Sound.click();
+  toast(`Dismantled ${item.name} for +${oreGained} Iron Ore.`);
+  openForge();
+}
+
+/* ---------- GOBLIN CASINO ---------- */
+function openCasino(){
+  const p = state.player;
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h2>🎲 Goblin Casino & Gambling Den</h2>
+    <p class="desc">Gold: <b>${p.gold}</b> — Test your fortune with high-roller bets and wheel spins!</p>
+    <div class="choice-row">
+      <div class="choice-card" onclick="rollDiceBet()">
+        <div class="icon">🎲</div>
+        <div class="name">High-Roller Dice</div>
+        <div class="flavor">Bet 50g. Roll 7+ to win 100g, roll 12 for 200g!</div>
+      </div>
+      <div class="choice-card" onclick="spinWheelOfFortune()">
+        <div class="icon">🎡</div>
+        <div class="name">Wheel of Fortune</div>
+        <div class="flavor">Spin for 50g. Win Gold, Essence, or S-Rank Relics!</div>
+      </div>
+      <div class="choice-card" onclick="openMysteryLootBox()">
+        <div class="icon">🎁</div>
+        <div class="name">Mystery Loot Box</div>
+        <div class="flavor">Spend 120g for rare items, pet companions, or gems!</div>
+      </div>
+    </div>
+    <div class="modal-actions"><button onclick="closeModal()">Leave Casino</button></div>
+  `);
+}
+
+function rollDiceBet(){
+  const p = state.player;
+  if(p.gold < 50) return;
+  p.gold -= 50;
+  const d1 = Math.floor(Math.random()*6) + 1;
+  const d2 = Math.floor(Math.random()*6) + 1;
+  const total = d1 + d2;
+  let winGold = 0;
+  if(total === 12) winGold = 200;
+  else if(total >= 7) winGold = 100;
+  p.gold += winGold;
+  if(winGold > 0) Sound.loot(); else Sound.defeat();
+  refreshHud();
+  openModal(`
+    <h2>🎲 Dice Roll: ${d1} + ${d2} = ${total}!</h2>
+    <p class="desc" style="font-size:16px; text-align:center; margin:20px 0;">
+      ${winGold > 0 ? `🎉 <b>YOU WON +${winGold} GOLD!</b>` : `💀 Bad luck! Lost 50g bet.`}
+    </p>
+    <div class="modal-actions">
+      <button class="primary" onclick="rollDiceBet()">Roll Again (50g)</button>
+      <button onclick="openCasino()">Back to Casino</button>
+    </div>
+  `);
+}
+
+function spinWheelOfFortune(){
+  const p = state.player;
+  if(p.gold < 50) return;
+  p.gold -= 50;
+  const roll = Math.random();
+  let prizeMsg = '';
+  if(roll < 0.40){
+    p.gold += 80;
+    prizeMsg = '💰 Won +80 Gold!';
+  } else if(roll < 0.70){
+    p.materials.shadowEssence = (p.materials.shadowEssence||0) + 2;
+    prizeMsg = '🌟 Won +2 Shadow Essence!';
+  } else if(roll < 0.90){
+    p.gems.ruby = (p.gems.ruby||0) + 1;
+    p.gems.sapphire = (p.gems.sapphire||0) + 1;
+    prizeMsg = '💎 Won 1 Ruby & 1 Sapphire Gem!';
+  } else {
+    const relic = RELICS_CATALOG[Math.floor(Math.random()*RELICS_CATALOG.length)];
+    p.inventory.push(relic);
+    prizeMsg = `✨ JACKPOT! Won Ancient Relic: ${relic.name}!`;
+  }
+  Sound.loot();
+  refreshHud();
+  openModal(`
+    <h2>🎡 Wheel Result!</h2>
+    <p class="desc" style="font-size:16px; text-align:center; margin:20px 0;"><b>${prizeMsg}</b></p>
+    <div class="modal-actions">
+      <button class="primary" onclick="spinWheelOfFortune()">Spin Again (50g)</button>
+      <button onclick="openCasino()">Back to Casino</button>
+    </div>
+  `);
+}
+
+function openMysteryLootBox(){
+  const p = state.player;
+  if(p.gold < 120) return;
+  p.gold -= 120;
+  const item = grantGuaranteedItem('S');
+  p.materials.monsterCore = (p.materials.monsterCore||0) + 1;
+  Sound.loot();
+  refreshHud();
+  openModal(`
+    <h2>🎁 Mystery Box Opened!</h2>
+    <p class="desc" style="font-size:15px; text-align:center; margin:20px 0;">Found: <b>${item.name} (${item.rank}-Rank)</b> + 1 Monster Core!</p>
+    <div class="modal-actions">
+      <button class="primary" onclick="openMysteryLootBox()">Open Another (120g)</button>
+      <button onclick="openCasino()">Back to Casino</button>
+    </div>
+  `);
+}
+
+function hireMercenary(id){
+  const p = state.player;
+  const m = MERCENARIES_CATALOG.find(x=>x.id===id);
+  if(!m || p.gold < m.cost) return;
+  p.gold -= m.cost;
+  if(!p.mercenaries) p.mercenaries = [];
+  p.mercenaries.push(id);
+  p.activeMercenary = id;
+  refreshHud();
+  Sound.loot();
+  toast(`Hired ${m.name} into party!`, 'var(--gold)');
+  openGuild();
+}
+
+function equipMercenary(id){
+  state.player.activeMercenary = id;
+  refreshHud();
+  Sound.click();
+  toast(`Mercenary party member active!`, 'var(--gold)');
+  openGuild();
+}
+
+function transcribeIncantation(id){
+  const p = state.player;
+  const inc = INCANTATIONS_CATALOG.find(x=>x.id===id);
+  if(!inc) return;
+  const mats = p.materials || {};
+  if((mats.shadowEssence||0) < inc.cost.shadowEssence || (mats.monsterCore||0) < inc.cost.monsterCore) return;
+
+  p.materials.shadowEssence -= inc.cost.shadowEssence;
+  p.materials.monsterCore -= inc.cost.monsterCore;
+  if(!p.activeIncantations) p.activeIncantations = [];
+  if(!p.activeIncantations.includes(id)) p.activeIncantations.push(id);
+  refreshHud();
+  Sound.magic();
+  toast(`Transcribed ${inc.name}! Active passive magic engaged.`, 'var(--violet)');
+  openSanctuary();
+}
+
+function showSocketMenu(itemId){
+  const p = state.player;
+  const gemButtons = GEMS_CATALOG.map(g => {
+    const count = p.gems ? p.gems[g.id]||0 : 0;
+    return `
+      <div class="item-row">
+        <span>${g.icon} <b>${g.name}</b> <span style="color:var(--ink-dim); font-size:11px;">(${g.desc}) — Owned: ${count}</span></span>
+        <button onclick="socketGemIntoItem(${itemId}, '${g.id}')" ${count>0?'':'disabled'}>Socket</button>
+      </div>`;
+  }).join('');
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h2>Socket Gem</h2>
+    <p class="desc">Select a gem to embed into this item:</p>
+    ${gemButtons}
+    <div class="modal-actions"><button onclick="openForge()">Back</button></div>
+  `);
+}
+
+function socketGemIntoItem(itemId, gemId){
+  const p = state.player;
+  if(!p.gems || (p.gems[gemId]||0) <= 0) return;
+  let item = Object.values(p.equipment).find(it=>it && it.id===itemId);
+  if(!item) item = p.inventory.find(it=>it.id===itemId);
+  if(!item) return;
+
+  const gemData = GEMS_CATALOG.find(g=>g.id===gemId);
+  p.gems[gemId]--;
+  item.socketedGem = gemData;
+  recomputeDerived(p);
+  refreshHud();
+  Sound.loot();
+  toast(`Socketed ${gemData.name} gem into ${item.name}!`, 'var(--gold)');
+  openForge();
+}
+
+function unsocketGem(itemId){
+  const p = state.player;
+  let item = Object.values(p.equipment).find(it=>it && it.id===itemId);
+  if(!item) item = p.inventory.find(it=>it.id===itemId);
+  if(!item || !item.socketedGem) return;
+
+  const gemId = item.socketedGem.id;
+  if(!p.gems) p.gems = {};
+  p.gems[gemId] = (p.gems[gemId]||0) + 1;
+  item.socketedGem = null;
+  recomputeDerived(p);
+  refreshHud();
+  Sound.click();
+  toast(`Unsocketed gem.`);
+  openForge();
+}
+
+function openSanctuary(){
+  const p = state.player;
+  if(!p.class){
+    const cards = Object.entries(CLASSES).map(([name,cls])=>`
+      <div class="choice-card" onclick="awaken('${name}')">
+        <div class="icon">${cls.icon}</div>
+        <div class="name">${name}</div>
+        <div class="flavor">${cls.flavor}</div>
+      </div>`).join('');
+    openModal(`
+      <button class="close-x" onclick="closeModal()">✕</button>
+      <h2>The Sanctuary</h2>
+      <p class="desc">A dormant flame flickers awake as you enter. Choose the path your power will take.</p>
+      <div class="choice-row">${cards}</div>
+    `);
+    return;
+  }
+
+  let specHtml = '';
+  if(p.level >= 15 && !p.specialization && SPECIALIZATIONS[p.class]){
+    const specCards = SPECIALIZATIONS[p.class].map(s=>`
+      <div class="choice-card" onclick="chooseSpecialization('${s.id}')">
+        <div class="icon">${s.icon}</div>
+        <div class="name">${s.id}</div>
+        <div class="flavor">${s.desc}</div>
+      </div>
+    `).join('');
+    specHtml = `
+      <p class="branch-title">🌟 Specialization Mastery Unlocked (Level 15+)</p>
+      <p class="desc">Choose your advanced subclass path. This decision is permanent.</p>
+      <div class="choice-row">${specCards}</div>
+    `;
+  }
+
+  const petCards = PETS_CATALOG.map(pt=>{
+    const owned = (p.pets||[]).includes(pt.id);
+    const active = p.activePet === pt.id;
+    return `
+      <div class="choice-card" style="${active?'border-color:var(--gold)':''}">
+        <div class="icon">${pt.icon}</div>
+        <div class="name">${pt.name}</div>
+        <div class="flavor">${pt.desc}</div>
+        <div style="margin-top:6px;">
+          ${active 
+            ? `<span class="rank-pill" style="background:var(--gold)22; color:var(--gold); border:1px solid var(--gold)">Active Pet</span>`
+            : owned 
+              ? `<button onclick="equipPet('${pt.id}')">Equip Pet</button>`
+              : `<button onclick="adoptPet('${pt.id}')" ${p.gold<100?'disabled':''}>Adopt (100g)</button>`}
+        </div>
+      </div>`;
+  }).join('');
+
+  const nR = nextRank(p.rank);
+  let trialHtml;
+  if(!nR){
+    trialHtml = `<p class="desc">You have reached the pinnacle: <b>S-Rank</b>. The flame has nothing left to test in you.</p>`;
+  } else if(p.level < RANKUP_LEVEL[p.rank]){
+    trialHtml = `<p class="desc">The flame senses potential for <b>${nR}-Rank</b>, but you are not yet ready. Return at Level ${RANKUP_LEVEL[p.rank]}.</p>`;
+  } else {
+    trialHtml = `
+      <p class="desc">The flame recognizes you are ready to test your limits against a Trial Guardian. Succeed, and you will ascend to <b>${nR}-Rank</b>.</p>
+      <div class="modal-actions"><button class="primary" onclick="startTrial()">Begin Trial of Ascension</button></div>
+    `;
+  }
+  const sancLvl = (p.buildingLevels && p.buildingLevels.sanctuary) || 1;
+  const sancUpgradeHtml = `
+    <p class="branch-title">🏰 Sanctuary Building (Level ${sancLvl})</p>
+    <div class="item-row">
+      <span><b>Perk</b>: +${(sancLvl-1)*15}% Permanent Max HP Bonus</span>
+      <button onclick="upgradeBuilding('sanctuary')">Upgrade (${sancLvl*90}g, ${sancLvl*5} Ore)</button>
+    </div>
+  `;
+
+  const grimoireRows = INCANTATIONS_CATALOG.map(inc => {
+    const active = (p.activeIncantations||[]).includes(inc.id);
+    const mats = p.materials || {};
+    const canAfford = (mats.shadowEssence||0) >= inc.cost.shadowEssence && (mats.monsterCore||0) >= inc.cost.monsterCore;
+    return `
+      <div class="item-row">
+        <span>${inc.icon} <b>${inc.name}</b>
+        <div style="color:var(--ink-dim); font-size:11px; margin-top:2px;">${inc.desc}</div></span>
+        ${active 
+          ? `<span class="rank-pill" style="background:var(--gold)22; color:var(--gold); border:1px solid var(--gold)">Active</span>`
+          : `<button onclick="transcribeIncantation('${inc.id}')" ${canAfford?'':'disabled'}>Transcribe (${inc.cost.shadowEssence} Ess, ${inc.cost.monsterCore} Core)</button>`}
+      </div>`;
+  }).join('');
+
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h2>The Sanctuary</h2>
+    <p class="desc">The old flame recognizes you as a <b>${p.rank}-Rank ${p.specialization ? p.specialization + ' ' : ''}${p.class}</b>.</p>
+    <div style="display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;">
+      <button class="primary" onclick="openConstellations()">⭐ Celestial Constellation Stargazing</button>
+      <button onclick="openDragonHatchery()">🐉 Dragon Hatchery</button>
+    </div>
+    ${sancUpgradeHtml}
+    ${specHtml}
+    ${trialHtml}
+    <p class="branch-title">📜 Arcane Grimoire & Spell Inscriptions</p>
+    <div>${grimoireRows}</div>
+    <p class="branch-title">🐾 Pet Companions</p>
+    <div class="choice-row">${petCards}</div>
+    <div class="modal-actions"><button onclick="closeModal()">Leave</button></div>
+  `);
+}
+
+function chooseSpecialization(specId){
+  const p = state.player;
+  p.specialization = specId;
+  recomputeDerived(p);
+  refreshHud();
+  Sound.levelUp();
+  toast(`Ascended Specialization: ${specId}!`, 'var(--gold)');
+  openSanctuary();
+}
+function adoptPet(petId){
+  const p = state.player;
+  if(p.gold < 100) return;
+  p.gold -= 100;
+  if(!p.pets) p.pets = [];
+  p.pets.push(petId);
+  p.activePet = petId;
+  refreshHud();
+  Sound.loot();
+  toast(`Adopted pet companion!`, 'var(--gold)');
+  openSanctuary();
+}
+function equipPet(petId){
+  state.player.activePet = petId;
+  refreshHud();
+  Sound.click();
+  toast(`Equipped pet companion!`, 'var(--gold)');
+  openSanctuary();
+}
+
+function rollRank(){
+  const total = RANK_WEIGHTS.reduce((a,b)=>a+b,0);
+  let roll = Math.random()*total;
+  for(let i=0;i<RANKS.length;i++){
+    if(roll < RANK_WEIGHTS[i]) return RANKS[i];
+    roll -= RANK_WEIGHTS[i];
+  }
+  return "D";
+}
+
+function awaken(className){
+  const p = state.player;
+  const rank = rollRank();
+  const cls = CLASSES[className];
+  p.class = className;
+  p.rank = rank;
+  p.stats = {...cls.baseStats};
+  p.stats[cls.atkStat] += RANK_BONUS[rank];
+  recomputeDerived(p);
+  p.hp = p.maxHp;
+  refreshHud();
+  openModal(`
+    <h2>Awakening Complete</h2>
+    <p class="desc">The flame surges. You rise as a</p>
+    <div style="text-align:center; margin: 10px 0 18px;">
+      <div style="font-size:38px;">${cls.icon}</div>
+      <div style="font-family:'Cinzel',serif; font-size:18px; margin-top:6px;">
+        <span style="color:${rankColor(rank)}">${rank}-Rank</span> ${className}
+      </div>
+    </div>
+    <p class="desc">Head to the Guild Hall to register as an adventurer. Then check the Skill Tree to spend Level + Gold on your first abilities.</p>
+    <div class="modal-actions"><button class="primary" onclick="closeModal()">Continue</button></div>
+  `);
+}
+
+function currentQuest(){ return state.player.questIndex < QUESTS.length ? QUESTS[state.player.questIndex] : null; }
+function questProgressText(q){
+  const p = state.player;
+  if(q.type === 'clearDungeon') return `${Math.min(p.dungeonClears[q.targetRank], q.targetCount)}/${q.targetCount} ${q.targetRank}-Rank clears`;
+  if(q.type === 'clearAny') return `${Math.min(p.dungeonClears.total, q.targetCount)}/${q.targetCount} dungeons cleared`;
+  if(q.type === 'reachLevel') return `Level ${p.level}/${q.targetCount}`;
+  return '';
+}
+function questComplete(q){
+  const p = state.player;
+  if(q.type === 'clearDungeon') return p.dungeonClears[q.targetRank] >= q.targetCount;
+  if(q.type === 'clearAny') return p.dungeonClears.total >= q.targetCount;
+  if(q.type === 'reachLevel') return p.level >= q.targetCount;
+  return false;
+}
+
+function openGuild(){
+  const p = state.player;
+  if(!p.class){
+    openModal(`
+      <button class="close-x" onclick="closeModal()">✕</button>
+      <h2>Guild Hall</h2>
+      <p class="desc">The clerk looks you over. "No class, no rank — the Sanctuary comes first, adventurer."</p>
+      <div class="modal-actions"><button onclick="closeModal()">Leave</button></div>
+    `);
+    return;
+  }
+  if(!p.guildRegistered){
+    openModal(`
+      <button class="close-x" onclick="closeModal()">✕</button>
+      <h2>Guild Hall</h2>
+      <p class="desc">"A ${p.rank}-Rank ${p.class}, hm? Sign here and you're free to take on dungeons."</p>
+      <div class="modal-actions">
+        <button onclick="closeModal()">Not yet</button>
+        <button class="primary" onclick="registerGuild()">Register as Adventurer</button>
+      </div>
+    `);
+    return;
+  }
+
+  const q = currentQuest();
+  let questHtml = `<div class="quest-box"><div class="qtitle">No rank quests remaining — you've proven yourself many times over.</div></div>`;
+  if(q){
+    const done = questComplete(q);
+    questHtml = `
+      <div class="quest-box">
+        <div class="qtitle">Guild Quest</div>
+        <div style="font-size:13px; margin-bottom:6px;">${q.desc}</div>
+        <div style="font-size:12px; color:var(--ink-dim);">${questProgressText(q)}</div>
+        <div class="modal-actions" style="margin-top:10px;">
+          <button class="primary" onclick="claimQuest()" ${done?'':'disabled'}>Claim Reward (${q.rewardGold}g${q.rewardXp?` + ${q.rewardXp} XP`:''})</button>
+        </div>
+      </div>`;
+  }
+
+  const bounties = p.bounties || { combo3: false, arena3: false, forgeUpgrade: false };
+  const bountyRows = `
+    <div class="item-row">
+      <span><b>Combo Master</b>: Reach 3x Combo in combat</span>
+      <button onclick="claimBounty('combo3')" ${bounties.combo3 ? 'disabled' : ''}>${bounties.combo3 ? 'Claimed' : 'Claim (40g, 2 Ore)'}</button>
+    </div>
+    <div class="item-row">
+      <span><b>Arena Challenger</b>: Reach Wave 3 in Arena</span>
+      <button onclick="claimBounty('arena3')" ${bounties.arena3 ? 'disabled' : ''}>${bounties.arena3 ? 'Claimed' : 'Claim (60g, 1 Essence)'}</button>
+    </div>
+    <div class="item-row">
+      <span><b>Master Artisan</b>: Upgrade gear at Blacksmith Forge</span>
+      <button onclick="claimBounty('forgeUpgrade')" ${bounties.forgeUpgrade ? 'disabled' : ''}>${bounties.forgeUpgrade ? 'Claimed' : 'Claim (50g, 3 Ore)'}</button>
+    </div>
+  `;
+
+  const guildLvl = (p.buildingLevels && p.buildingLevels.guild) || 1;
+  const guildUpgradeHtml = `
+    <p class="branch-title">🏰 Guild Hall Building (Level ${guildLvl})</p>
+    <div class="item-row">
+      <span><b>Perk</b>: ${guildLvl>1?'Expeditions & Raid Unlocked':'Upgrade to unlock Expeditions & Calamity Raid'}</span>
+      <button onclick="upgradeBuilding('guild')">Upgrade (${guildLvl*90}g, ${guildLvl*5} Ore)</button>
+    </div>
+  `;
+
+  let expeditionHtml = '';
+  if(guildLvl >= 2){
+    if(p.expedition){
+      const remaining = Math.max(0, Math.ceil((p.expedition.endTime - Date.now())/1000));
+      const ready = remaining === 0;
+      expeditionHtml = `
+        <p class="branch-title">⚔️ Guild Expedition Active</p>
+        <div class="item-row">
+          <span><b>${p.expedition.name}</b> <span style="color:var(--ink-dim); font-size:11px;">(${ready?'Complete!':`${remaining}s remaining`})</span></span>
+          <button class="${ready?'primary':''}" onclick="claimExpedition()" ${ready?'':'disabled'}>${ready?'Claim Loot':'In Progress'}</button>
+        </div>
+      `;
+    } else {
+      expeditionHtml = `
+        <p class="branch-title">⚔️ Guild Expeditions (Away Missions)</p>
+        <div class="item-row">
+          <span><b>Ruins Exploration</b> (60s) <span style="color:var(--ink-dim); font-size:11px;">Reward: 100g, 3 Ore</span></span>
+          <button onclick="startExpedition('ruins')">Dispatch Squad</button>
+        </div>
+        <div class="item-row">
+          <span><b>Shadow Shaft Mining</b> (120s) <span style="color:var(--ink-dim); font-size:11px;">Reward: 250g, 2 Essence</span></span>
+          <button onclick="startExpedition('shaft')">Dispatch Squad</button>
+        </div>
+      `;
+    }
+
+    expeditionHtml += `
+      <p class="branch-title">🐉 World Boss Calamity Raid</p>
+      <div class="item-row">
+        <span><b>Calamity Dragon Ignis 🐉</b> <span style="color:var(--danger); font-size:11px;">(600 HP Raid Boss)</span></span>
+        <button class="danger" onclick="startCalamityRaid()">Challenge Raid Boss</button>
+      </div>
+    `;
+  }
+
+  const mercCards = MERCENARIES_CATALOG.map(m => {
+    const hired = (p.mercenaries||[]).includes(m.id);
+    const active = p.activeMercenary === m.id;
+    return `
+      <div class="choice-card" style="${active?'border-color:var(--gold)':''}">
+        <div class="icon">${m.icon}</div>
+        <div class="name">${m.name}</div>
+        <div class="flavor">${m.desc}</div>
+        <div style="margin-top:6px;">
+          ${active 
+            ? `<span class="rank-pill" style="background:var(--gold)22; color:var(--gold); border:1px solid var(--gold)">In Party</span>`
+            : hired 
+              ? `<button onclick="equipMercenary('${m.id}')">Join Party</button>`
+              : `<button onclick="hireMercenary('${m.id}')" ${p.gold<m.cost?'disabled':''}>Hire (${m.cost}g)</button>`}
+        </div>
+      </div>`;
+  }).join('');
+
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h2>Guild Hall</h2>
+    <p class="desc">You are registered as a <b>${p.rank}-Rank ${p.specialization?p.specialization+' ':''}${p.class}</b>.</p>
+    ${guildUpgradeHtml}
+    ${questHtml}
+    ${expeditionHtml}
+    <p class="branch-title">🛡️ Mercenary Guild Companions</p>
+    <div class="choice-row">${mercCards}</div>
+    <p class="branch-title">📜 Daily Bounty Board</p>
+    <div>${bountyRows}</div>
+    <div class="modal-actions"><button onclick="closeModal()">Leave</button></div>
+  `);
+}
+
+function claimBounty(key){
+  const p = state.player;
+  if(!p.bounties) p.bounties = { combo3: false, arena3: false, forgeUpgrade: false };
+  if(p.bounties[key]) return;
+
+  if(key === 'combo3'){ p.gold += 40; p.materials.ironOre = (p.materials.ironOre||0) + 2; }
+  else if(key === 'arena3'){ p.gold += 60; p.materials.shadowEssence = (p.materials.shadowEssence||0) + 1; }
+  else if(key === 'forgeUpgrade'){ p.gold += 50; p.materials.ironOre = (p.materials.ironOre||0) + 3; }
+
+  p.bounties[key] = true;
+  refreshHud();
+  Sound.loot();
+  toast('Bounty Reward Claimed!', 'var(--good)');
+  openGuild();
+}
+
+function registerGuild(){
+  state.player.guildRegistered = true;
+  refreshHud();
+  openModal(`
+    <h2>Registered</h2>
+    <p class="desc">You're official. Your Adventurer's Tag hums faintly with your rank. Time to earn it.</p>
+    <div class="modal-actions"><button class="primary" onclick="closeModal()">Continue</button></div>
+  `);
+}
+
+function claimQuest(){
+  const p = state.player;
+  const q = currentQuest();
+  if(!q || !questComplete(q)) return;
+  p.gold += q.rewardGold;
+  if(q.rewardXp) grantXp(q.rewardXp);
+  p.questIndex++;
+  refreshHud();
+  toast(`Quest complete! +${q.rewardGold} gold${q.rewardXp?` +${q.rewardXp} XP`:''}`, 'var(--good)');
+  maybeShowPendingTalent(()=>openGuild());
+}
+
+/* ---------- MERCHANT ---------- */
+function openMerchant(){
+  const p = state.player;
+  if(!p.class){
+    openModal(`
+      <button class="close-x" onclick="closeModal()">✕</button>
+      <h2>Merchant</h2>
+      <p class="desc">"Come back once you've awakened, friend. Nothing here for the unranked."</p>
+      <div class="modal-actions"><button onclick="closeModal()">Leave</button></div>
+    `);
+    return;
+  }
+  const sellRows = p.inventory.filter(it=>!it.isTome).length ? p.inventory.filter(it=>!it.isTome).map(it => `
+    <div class="item-row">
+      <span><span class="rank-pill" style="background:${rankColor(it.rank)}22; color:${rankColor(it.rank)}; border:1px solid ${rankColor(it.rank)}">${it.rank}</span> ${getItemName(it)}</span>
+      <button onclick="sellItem(${it.id})">Sell (${SELL_VALUE[it.rank]}g)</button>
+    </div>
+  `).join('') : `<div class="empty-note">Nothing to sell.</div>`;
+
+  const merchLvl = (p.buildingLevels && p.buildingLevels.merchant) || 1;
+  const discountMult = merchLvl > 1 ? 0.85 : 1.0;
+  const merchUpgradeHtml = `
+    <p class="branch-title">🏰 Merchant Building (Level ${merchLvl})</p>
+    <div class="item-row">
+      <span><b>Perk</b>: ${merchLvl>1?'15% Store Discount Active':'Upgrade for Store Discounts'}</span>
+      <button onclick="upgradeBuilding('merchant')">Upgrade (${merchLvl*90}g, ${merchLvl*5} Ore)</button>
+    </div>
+  `;
+
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h2>Merchant</h2>
+    <p class="desc">Gold: <b>${p.gold}</b></p>
+    ${merchUpgradeHtml}
+    <div class="item-row">
+      <span>Health Potion <span style="color:var(--ink-dim); font-size:11px;">(heals 40% HP) — owned: ${p.consumables.potion||0}</span></span>
+      <button onclick="buyPotion()" ${p.gold < Math.round(15*discountMult) ? 'disabled' : ''}>Buy (${Math.round(15*discountMult)}g)</button>
+    </div>
+    <div class="item-row">
+      <span>Elixir of Might <span style="color:var(--ink-dim); font-size:11px;">(+4 Main Stat) — owned: ${p.consumables.elixirMight||0}</span></span>
+      <button onclick="buyElixirMight()" ${p.gold < Math.round(30*discountMult) ? 'disabled' : ''}>Buy (${Math.round(30*discountMult)}g)</button>
+    </div>
+    <div class="item-row">
+      <span>Flask of Focus <span style="color:var(--ink-dim); font-size:11px;">(Full Focus start) — owned: ${p.consumables.flaskFocus||0}</span></span>
+      <button onclick="buyFlaskFocus()" ${p.gold < Math.round(25*discountMult) ? 'disabled' : ''}>Buy (${Math.round(25*discountMult)}g)</button>
+    </div>
+    <p class="desc" style="margin:14px 0 6px;">Sell unequipped gear</p>
+    ${sellRows}
+    <div class="modal-actions"><button class="primary" onclick="closeModal()">Close</button></div>
+  `);
+}
+function buyPotion(){
+  const p = state.player;
+  if(p.gold < 15) return;
+  p.gold -= 15;
+  p.consumables.potion = (p.consumables.potion||0) + 1;
+  refreshHud();
+  openMerchant();
+}
+function buyElixirMight(){
+  const p = state.player;
+  if(p.gold < 30) return;
+  p.gold -= 30;
+  p.consumables.elixirMight = (p.consumables.elixirMight||0) + 1;
+  refreshHud();
+  openMerchant();
+}
+function buyFlaskFocus(){
+  const p = state.player;
+  if(p.gold < 25) return;
+  p.gold -= 25;
+  p.consumables.flaskFocus = (p.consumables.flaskFocus||0) + 1;
+  refreshHud();
+  openMerchant();
+}
+
+/* ---------- BLACKSMITH FORGE ---------- */
+function openForge(){
+  const p = state.player;
+  if(!p.class){
+    openModal(`
+      <button class="close-x" onclick="closeModal()">✕</button>
+      <h2>Blacksmith Forge</h2>
+      <p class="desc">The blacksmith clangs his hammer on anvil. "Come back after awakening at the Sanctuary, rookie!"</p>
+      <div class="modal-actions"><button onclick="closeModal()">Leave</button></div>
+    `);
+    return;
+  }
+
+  const forgeLvl = (p.buildingLevels && p.buildingLevels.forge) || 1;
+  const maxUpgradeCap = 5 + (forgeLvl - 1) * 5;
+  const forgeUpgradeHtml = `
+    <p class="branch-title">🏰 Blacksmith Forge Building (Level ${forgeLvl})</p>
+    <div class="item-row">
+      <span><b>Perk</b>: Max Gear Upgrade Limit +${maxUpgradeCap}</span>
+      <button onclick="upgradeBuilding('forge')">Upgrade (${forgeLvl*90}g, ${forgeLvl*5} Ore)</button>
+    </div>
+  `;
+
+  const allGear = [];
+  ['weapon','armor','accessory'].forEach(slot=>{
+    if(p.equipment[slot]) allGear.push({ item: p.equipment[slot], location: `Equipped ${slot}` });
+  });
+  p.inventory.filter(it=>!it.isTome).forEach(it=>{
+    allGear.push({ item: it, location: 'Inventory' });
+  });
+
+  const upgradeRows = allGear.length ? allGear.map(({item, location}) => {
+    const lvl = item.upgradeLevel || 0;
+    const maxLvl = lvl >= maxUpgradeCap;
+    const oreCost = (lvl + 1) * 3;
+    const goldCost = (lvl + 1) * 20;
+    const canAfford = p.gold >= goldCost && mats.ironOre >= oreCost;
+    return `
+      <div class="item-row">
+        <span>
+          <span class="rank-pill" style="background:${rankColor(item.rank)}22; color:${rankColor(item.rank)}; border:1px solid ${rankColor(item.rank)}">${item.rank}</span>
+          <b>${getItemName(item)}</b> <span style="color:var(--ink-dim); font-size:11px;">(${location})</span>
+          <div style="color:var(--good); font-size:11px; margin-top:2px;">${statBonusText(item)}</div>
+        </span>
+        ${maxLvl 
+          ? `<span class="rank-pill" style="background:var(--gold)22; color:var(--gold); border:1px solid var(--gold)">MAX (+${maxUpgradeCap})</span>`
+          : `<button onclick="upgradeGear(${item.id})" ${canAfford ? '' : 'disabled'}>Upgrade (${goldCost}g, ${oreCost} Ore)</button>`}
+      </div>`;
+  }).join('') : `<div class="empty-note">No gear available to upgrade.</div>`;
+
+  const dismantleRows = p.inventory.filter(it=>!it.isTome).length ? p.inventory.filter(it=>!it.isTome).map(item => {
+    const yieldOre = item.rank==='S'?15: item.rank==='A'?10: item.rank==='B'?6: item.rank==='C'?4: 2;
+    return `
+      <div class="item-row">
+        <span>
+          <span class="rank-pill" style="background:${rankColor(item.rank)}22; color:${rankColor(item.rank)}; border:1px solid ${rankColor(item.rank)}">${item.rank}</span>
+          ${getItemName(item)}
+        </span>
+        <button class="danger" onclick="dismantleItem(${item.id})">Dismantle (+${yieldOre} Ore)</button>
+      </div>`;
+  }).join('') : `<div class="empty-note">No unequipped gear to dismantle.</div>`;
+
+  const gemText = `🔴 Ruby: <b>${p.gems?p.gems.ruby||0:0}</b> · 🔵 Sapphire: <b>${p.gems?p.gems.sapphire||0:0}</b> · 🟡 Topaz: <b>${p.gems?p.gems.topaz||0:0}</b> · 🟢 Emerald: <b>${p.gems?p.gems.emerald||0:0}</b>`;
+  
+  const socketableGear = allGear.filter(g => (g.item.upgradeLevel||0) >= 3);
+  const socketRows = socketableGear.length ? socketableGear.map(({item, location}) => {
+    const gem = item.socketedGem;
+    return `
+      <div class="item-row">
+        <span>
+          <b>${getItemName(item)}</b> <span style="color:var(--ink-dim); font-size:11px;">(${location})</span>
+          ${gem ? `<span style="color:var(--gold); margin-left:6px;">[Socketed: ${gem.icon} ${gem.name}]</span>` : `<span style="color:var(--ink-dim); margin-left:6px;">[Empty Socket]</span>`}
+        </span>
+        ${gem 
+          ? `<button class="danger" onclick="unsocketGem(${item.id})">Unsocket</button>`
+          : `<button onclick="showSocketMenu(${item.id})">Socket Gem</button>`}
+      </div>`;
+  }).join('') : `<div class="empty-note">No +3 upgraded gear available to socket.</div>`;
+
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h2>Blacksmith Forge</h2>
+    <p class="desc">${matText}</p>
+    ${forgeUpgradeHtml}
+    <p class="branch-title">💎 Gem Socketing (+3 Gear Sockets)</p>
+    <p class="desc" style="font-size:11px; margin-bottom:4px;">${gemText}</p>
+    <div style="max-height: 110px; overflow-y:auto; margin-bottom:8px;">${socketRows}</div>
+    <p class="branch-title">Upgrade Equipment (+15% stats per level)</p>
+    <div style="max-height: 180px; overflow-y:auto;">${upgradeRows}</div>
+    <p class="branch-title">Dismantle Unequipped Gear</p>
+    <div style="max-height: 140px; overflow-y:auto;">${dismantleRows}</div>
+    <div class="modal-actions"><button class="primary" onclick="closeModal()">Close</button></div>
+  `);
+}
+
+function upgradeGear(itemId){
+  const p = state.player;
+  const forgeLvl = (p.buildingLevels && p.buildingLevels.forge) || 1;
+  const maxUpgradeCap = 5 + (forgeLvl - 1) * 5;
+
+  let item = Object.values(p.equipment).find(it=>it && it.id===itemId);
+  if(!item) item = p.inventory.find(it=>it.id===itemId);
+  if(!item) return;
+
+  const lvl = item.upgradeLevel || 0;
+  if(lvl >= maxUpgradeCap) return;
+
+  const oreCost = (lvl + 1) * 3;
+  const goldCost = (lvl + 1) * 20;
+  if(p.gold < goldCost || (p.materials.ironOre||0) < oreCost) return;
+
+  p.gold -= goldCost;
+  p.materials.ironOre -= oreCost;
+  item.upgradeLevel = lvl + 1;
+
+  if(item.upgradeLevel >= 5) checkAchievement('artisan');
+
+  recomputeDerived(p);
+  refreshHud();
+  Sound.loot();
+  toast(`Upgraded ${item.name} to +${item.upgradeLevel}!`, 'var(--gold)');
+  openForge();
+}
+
+function dismantleItem(itemId){
+  const p = state.player;
+  const idx = p.inventory.findIndex(it=>it.id===itemId);
+  if(idx === -1) return;
+
+  const item = p.inventory[idx];
+  const yieldOre = item.rank==='S'?15: item.rank==='A'?10: item.rank==='B'?6: item.rank==='C'?4: 2;
+  const yieldEssence = item.rank==='S'?5: item.rank==='A'?3: item.rank==='B'?1: 0;
+
+  p.materials.ironOre = (p.materials.ironOre||0) + yieldOre;
+  if(yieldEssence) p.materials.shadowEssence = (p.materials.shadowEssence||0) + yieldEssence;
+
+  p.inventory.splice(idx,1);
+  refreshHud();
+  Sound.attack();
+  toast(`Dismantled ${item.name} -> +${yieldOre} Iron Ore!`);
+  openForge();
+}
+function sellItem(id){
+  const p = state.player;
+  const idx = p.inventory.findIndex(it=>it.id===id);
+  if(idx === -1) return;
+  const item = p.inventory[idx];
+  p.inventory.splice(idx,1);
+  p.gold += SELL_VALUE[item.rank];
+  refreshHud();
+  openMerchant();
+}
+
+/* ---------- ARENA ---------- */
+function openArena(){
+  const p = state.player;
+  if(!p.guildRegistered){
+    openModal(`
+      <button class="close-x" onclick="closeModal()">✕</button>
+      <h2>Arena</h2>
+      <p class="desc">A warded barrier blocks your path. "Guild-registered adventurers only," a sigil reads.</p>
+      <div class="modal-actions"><button onclick="closeModal()">Leave</button></div>
+    `);
+    return;
+  }
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h2>Arena</h2>
+    <p class="desc">Endless waves, no boss, no fixed end. Difficulty climbs every wave you clear, and rewards climb with it. Flee anytime to bank what you've earned — falling loses only the current run.</p>
+    <div class="modal-actions"><button class="primary" onclick="enterArena()">Enter the Arena</button></div>
+  `);
+}
+function enterArena(){
+  const p = state.player;
+  const arenaDungeon = {
+    rank: p.rank || 'D', name: 'Arena', rooms: Infinity, tierMult: 1, xpMult: 1,
+    prefix: 'Arena', bossName: null, bossTrait: null, isArena: true, wave: 1
+  };
+  state.combat = {
+    dungeon: arenaDungeon, roomIndex: 0, totalRooms: Infinity,
+    enemy: makeEnemy(arenaDungeon, 'normal'), focus: getFocusMax(p), log: [], secondChanceUsed: false
+  };
+  p.shield = 0; p.guaranteedCritNext = false; p.evadeNext = false;
+  closeModal();
+  renderCombat(`You step into the Arena. The crowd roars as your first opponent emerges.`);
+}
+
+/* ---------- SPIRE OF TRIALS ---------- */
+function openSpire(){
+  const p = state.player;
+  if(!p.guildRegistered){
+    openModal(`
+      <button class="close-x" onclick="closeModal()">✕</button>
+      <h2>Spire of Trials</h2>
+      <p class="desc">The ancient tower hums. Guild registration required to enter.</p>
+      <div class="modal-actions"><button onclick="closeModal()">Leave</button></div>
+    `);
+    return;
+  }
+
+  const floor = p.spireFloor || 1;
+  const isMilestone = floor % 10 === 0;
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h2>🏰 Spire of Trials — Floor ${floor} / 100</h2>
+    <p class="desc">${isMilestone ? '⭐ <b>MILESTONE FLOOR</b>: Defeat the Spire Guardian for +2 Stat Points & S-Rank Relic!' : 'Climb the spire for scaling XP, Gold, and rare materials.'}</p>
+    <p class="desc" style="color:var(--gold);">Floor Hazard: Floor ${floor} Aura (Enemies deal +${Math.round(floor*2)}% bonus damage).</p>
+    <div class="modal-actions">
+      <button class="primary" onclick="enterSpireFloor()">Challenge Floor ${floor}</button>
+      <button onclick="closeModal()">Leave Spire</button>
+    </div>
+  `);
+}
+
+function enterSpireFloor(){
+  const p = state.player;
+  const floor = p.spireFloor || 1;
+  const spireDungeon = {
+    rank: 'S', name: `Spire Floor ${floor}`, rooms: 1, tierMult: 1 + floor * 0.1,
+    xpMult: 1.8, prefix: 'Spire', bossName: `Floor ${floor} Guardian`, bossTrait: 'vicious', isSpire: true
+  };
+  state.combat = {
+    dungeon: spireDungeon, roomIndex: 0, totalRooms: 1,
+    enemy: makeEnemy(spireDungeon, 'boss'),
+    focus: getFocusMax(p), log: [], secondChanceUsed: false
+  };
+  closeModal();
+  renderCombat(`You enter Spire Floor ${floor}. The Guardian steps forward!`);
+}
+
+/* ---------- FISHING POND ---------- */
+function openPond(){
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h2>🎣 Celestial Fishing Pond</h2>
+    <p class="desc">Calm waters shimmer under the sky. Cast your line to catch glowing fish, gem chests, or relic shards.</p>
+    <div style="text-align:center; margin:20px 0;">
+      <div style="font-size:48px; margin-bottom:12px;">🌊 🎣 🐟</div>
+      <button class="primary" style="font-size:16px; padding:12px 24px;" onclick="startFishing()">Cast Fishing Line (10g)</button>
+    </div>
+    <div class="modal-actions"><button onclick="closeModal()">Leave Pond</button></div>
+  `);
+}
+
+function startFishing(){
+  const p = state.player;
+  if(p.gold < 10) return;
+  p.gold -= 10;
+  
+  const roll = Math.random();
+  let catchMsg = '';
+  if(roll < 0.45){
+    p.hp = p.maxHp;
+    catchMsg = '🐟 Caught a Glowing Moonfish! Restored full HP.';
+  } else if(roll < 0.80){
+    const goldFound = 40;
+    p.gold += goldFound;
+    p.materials.ironOre = (p.materials.ironOre||0) + 2;
+    catchMsg = `🗝️ Reeled in a Sunken Gem Chest! +${goldFound} Gold, +2 Iron Ore!`;
+  } else {
+    const relic = RELICS_CATALOG[Math.floor(Math.random()*RELICS_CATALOG.length)];
+    p.inventory.push(relic);
+    catchMsg = `✨ REELED IN AN ANCIENT RELIC: ${relic.name}!`;
+  }
+  Sound.loot();
+  refreshHud();
+  openModal(`
+    <h2>Catch Success!</h2>
+    <p class="desc" style="font-size:15px; text-align:center; margin:20px 0;"><b>${catchMsg}</b></p>
+    <div class="modal-actions">
+      <button class="primary" onclick="openPond()">Fish Again</button>
+      <button onclick="closeModal()">Close</button>
+    </div>
+  `);
+}
+
+/* ---------- DUNGEON GATE / SELECTION ---------- */
+function openDungeonGate(){
+  const p = state.player;
+  if(!p.guildRegistered){
+    openModal(`
+      <button class="close-x" onclick="closeModal()">✕</button>
+      <h2>Dungeon Gate</h2>
+      <p class="desc">A warded barrier blocks your path. "Guild-registered adventurers only," a sigil reads.</p>
+      <div class="modal-actions"><button onclick="closeModal()">Leave</button></div>
+    `);
+    return;
+  }
+  const cards = DUNGEONS.map((d,i)=>{
+    const locked = p.level < d.unlockLevel;
+    return `
+      <div class="dungeon-card ${locked?'locked':''}">
+        <div class="info">
+          <div class="name"><span class="rank-pill" style="background:${rankColor(d.rank)}22; color:${rankColor(d.rank)}; border:1px solid ${rankColor(d.rank)}">${d.rank}</span> ${d.name}</div>
+          <div class="meta">${d.rooms} chambers + boss ${locked?`· unlocks at Level ${d.unlockLevel}`:''}</div>
+        </div>
+        <button ${locked?'disabled':''} onclick="enterDungeon(${i})">${locked?'Locked':'Enter'}</button>
+      </div>`;
+  }).join('');
+
+  const mut = state.selectedMutators || { infernal: false, ironclad: false, vampiric: false };
+  const mutatorHtml = `
+    <p class="branch-title">🌀 Dungeon Affixes / Mutators (Optional Challenge)</p>
+    <div class="item-row">
+      <span>🔥 <b>Infernal Heat</b> (Enemies +25% Atk $\rightarrow$ +50% Gold/XP)</span>
+      <button onclick="toggleMutator('infernal')">${mut.infernal ? 'ACTIVE' : 'Enable'}</button>
+    </div>
+    <div class="item-row">
+      <span>🛡️ <b>Iron Clad</b> (Enemies +50% Def $\rightarrow$ +30% Loot Rate)</span>
+      <button onclick="toggleMutator('ironclad')">${mut.ironclad ? 'ACTIVE' : 'Enable'}</button>
+    </div>
+    <div class="item-row">
+      <span>⚡ <b>Vampiric Swarm</b> (Enemies 15% Lifesteal $\rightarrow$ +2 Ore)</span>
+      <button onclick="toggleMutator('vampiric')">${mut.vampiric ? 'ACTIVE' : 'Enable'}</button>
+    </div>
+  `;
+
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h2>Dungeon Gate</h2>
+    <p class="desc">Choose a sealed dungeon to clear.</p>
+    ${mutatorHtml}
+    <p class="branch-title" style="margin-top:14px;">Select Dungeon</p>
+    ${cards}
+  `);
+}
+
+function toggleMutator(key){
+  if(!state.selectedMutators) state.selectedMutators = { infernal: false, ironclad: false, vampiric: false };
+  state.selectedMutators[key] = !state.selectedMutators[key];
+  openDungeonGate();
+}
+
+function makeEnemy(dungeon, kind){
+  const p = state.player;
+  const levelScale = 1 + (p.level-1)*0.18;
+  const scale = levelScale * dungeon.tierMult;
+  if(kind === 'boss'){
+    return { name: dungeon.bossName, maxHp: Math.round(34*scale), hp: Math.round(34*scale),
+      atk: Math.round(6*scale), def: Math.round(2*scale), xp: 24, isBoss:true, trait: dungeon.bossTrait };
+  }
+  const t = ENEMY_TEMPLATES[Math.floor(Math.random()*ENEMY_TEMPLATES.length)];
+  const name = `${dungeon.prefix} ${t.base}`;
+  return { name, maxHp: Math.round(16*scale), hp: Math.round(16*scale),
+    atk: Math.round(3*scale), def: Math.round(1*scale), xp: 8, isBoss:false, trait: t.trait };
+}
+
+function enterDungeon(dungeonIdx){
+  const p = state.player;
+  const dungeon = DUNGEONS[dungeonIdx];
+  state.combat = {
+    dungeon, roomIndex: 0, totalRooms: dungeon.rooms,
+    enemy: makeEnemy(dungeon, 'normal'),
+    focus: getFocusMax(p), log: [], secondChanceUsed: false
+  };
+  p.shield = 0; p.guaranteedCritNext = false; p.evadeNext = false;
+  closeModal();
+  renderCombat(`You step into ${dungeon.name}. Something stirs in the dark ahead.`);
+}
+
+function startTrial(){
+  const p = state.player;
+  const nR = nextRank(p.rank);
+  if(!nR) return;
+  const trialDungeon = {
+    rank: nR, name: `${nR}-Rank Trial`, rooms: 1,
+    tierMult: (DUNGEON_TIER_MULT[nR]||1) * 1.3,
+    xpMult: 1.5, prefix: 'Trial', bossName: 'Trial Guardian', bossTrait: 'armored', isTrial: true
+  };
+  state.combat = {
+    dungeon: trialDungeon, roomIndex: 0, totalRooms: 1,
+    enemy: makeEnemy(trialDungeon, 'boss'),
+    focus: getFocusMax(p), log: [], secondChanceUsed: false
+  };
+  p.shield = 0; p.guaranteedCritNext = false; p.evadeNext = false;
+  closeModal();
+  renderCombat(`The Sanctuary tests your resolve. A ${trialDungeon.bossName} rises to bar your path to ${nR}-Rank.`);
+}
+
+/* ================= COMBAT ================= */
+function renderCombat(introLine){
+  const p = state.player;
+  const c = state.combat;
+  if(!c) return;
+
+  const cls = CLASSES[p.class];
+  if(introLine) c.log.unshift(introLine);
+  const logHtml = c.log.slice(0,7).map(l=> (l.startsWith('⭐')||l.startsWith('✦')) ? `<div class="level-line">${l}</div>` : `<div>${l}</div>`).join('');
+
+  const skills = getUnlockedCombatSkills(p);
+  const skillButtons = skills.map(sk=>{
+    const ready = c.focus >= sk.cost;
+    return `<button onclick="combatAction('skill_${sk.id}')" ${ready?'':'disabled'}>${sk.name} (${sk.cost} Focus)</button>`;
+  }).join('');
+
+  const potionBtn = `<button onclick="combatAction('potion')" ${p.consumables.potion>0?'':'disabled'}>Potion (${p.consumables.potion||0})</button>`;
+
+  let header;
+  if(c.dungeon.isArena) header = `Arena — Wave ${c.dungeon.wave}`;
+  else if(c.enemy.isBoss) header = `${c.dungeon.isTrial ? 'Trial' : 'Boss'}: ${c.dungeon.name}`;
+  else header = `${c.dungeon.name} — Chamber ${c.roomIndex+1}/${c.totalRooms}`;
+
+  const shieldNote = p.shield>0 ? ` <span style="color:#4c8fe8;">(Shielded ${p.shield})</span>` : '';
+  const comboPill = (c.combo > 1) ? ` <span class="rank-pill" style="background:var(--gold)22; color:var(--gold); border:1px solid var(--gold)">Combo x${c.combo} (+${c.combo*10}% Dmg)</span>` : '';
+  const autoBtn = `<button class="${c.autoBattle?'primary':''}" onclick="toggleAutoBattle()">${c.autoBattle?'🤖 Auto: ON':'🤖 Auto: OFF'}</button>`;
+  const speedBtn = `<button onclick="toggleSpeed()">${c.speed2x?'⚡ 2x':'🐌 1x'}</button>`;
+
+  let mercHtml = '';
+  if(p.activeMercenary){
+    const merc = MERCENARIES_CATALOG.find(m=>m.id===p.activeMercenary);
+    if(merc){
+      mercHtml = `
+        <div class="combatant">
+          <div class="name"><span>${merc.icon} ${merc.name}</span><span class="hp-text">Party Ally</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:100%; background:linear-gradient(90deg,#4cd684,#8ef0b5)"></div></div>
+        </div>
+      `;
+    }
+  }
+
+  openModal(`
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+      <h2 style="margin:0;">${header}</h2>
+      <div>${autoBtn} ${speedBtn}</div>
+    </div>
+    <div class="combatants">
+      <div class="combatant">
+        <div class="name"><span>${p.class}${shieldNote}${comboPill}</span><span class="hp-text">${p.hp}/${p.maxHp} HP</span></div>
+        <div class="bar-track"><div class="bar-fill hp-fill" style="width:${(p.hp/p.maxHp)*100}%"></div></div>
+      </div>
+      ${mercHtml}
+      <div class="combatant">
+        <div class="name"><span>${c.enemy.name}${c.enemy.element&&ELEMENT_MATRIX[c.enemy.element]?` <span style="font-weight:400;">(${ELEMENT_MATRIX[c.enemy.element].symbol} ${c.enemy.element})</span>`:''}${c.enemy.trait!=='none'?` <span style="color:var(--ink-dim); font-weight:400;">(${c.enemy.trait})</span>`:''}</span><span class="hp-text">${c.enemy.hp}/${c.enemy.maxHp} HP</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${(c.enemy.hp/c.enemy.maxHp)*100}%; background:linear-gradient(90deg,#a64ce8,#c99bff)"></div></div>
+      </div>
+    </div>
+    <div class="focus-row"><span>Focus</span><span>${c.focus}/${getFocusMax(p)}</span></div>
+    <div class="bar-track"><div class="bar-fill focus-fill" style="width:${(c.focus/getFocusMax(p))*100}%"></div></div>
+    <div class="log-box">${logHtml}</div>
+    <div class="modal-actions" style="justify-content:flex-start;">
+      <button class="primary" style="background:linear-gradient(90deg,#e8b34d,#ff6b4a);" onclick="combatAction('qte_attack')">⚡ Strike (QTE)</button>
+      <button onclick="combatAction('attack')">Attack</button>
+      ${skillButtons}
+      ${potionBtn}
+      <button onclick="combatAction('flee')">Flee</button>
+    </div>
+  `);
+
+  if(c.autoBattle) triggerAutoStep();
+}
+
+let qteActive = false;
+let qteTimer = null;
+
+function triggerQTEAttack(){
+  const p = state.player;
+  const c = state.combat;
+  if(!c) return;
+  if(c.autoBattle) { executeNormalAttack(1.0); return; }
+
+  qteActive = true;
+  openModal(`
+    <h2 style="text-align:center; color:var(--gold);">⚡ PERFECT TIMING STRIKE!</h2>
+    <p class="desc" style="text-align:center;">Click <b>STRIKE NOW!</b> within 1.0 second for <b>x2.0 Critical Damage</b> & +2 Combo!</p>
+    <div style="text-align:center; margin: 24px 0;">
+      <button class="primary" style="font-size:18px; padding: 14px 28px; background: linear-gradient(90deg, #e8b34d, #ff6b4a);" onclick="resolveQTE(true)">⚡ STRIKE NOW!</button>
+    </div>
+    <div class="modal-actions" style="justify-content:center;"><button onclick="resolveQTE(false)">Skip (Normal Strike)</button></div>
+  `);
+
+  clearTimeout(qteTimer);
+  qteTimer = setTimeout(()=>{
+    if(qteActive) resolveQTE(false);
+  }, 1000);
+}
+
+function resolveQTE(clicked){
+  clearTimeout(qteTimer);
+  const wasActive = qteActive;
+  qteActive = false;
+  closeModal();
+  executeNormalAttack(clicked && wasActive ? 2.0 : 1.0);
+}
+
+function executeNormalAttack(qteMult){
+  const p = state.player;
+  const c = state.combat;
+  if(!c) return;
+  const cls = CLASSES[p.class];
+  const eff = getEffectiveStats(p);
+  const baseRaw = Math.round((eff[cls.atkStat]*2 + Math.floor(Math.random()*5) - 2) * qteMult);
+  const { dmg, isCrit } = computeOutgoingDamage(p, baseRaw, c.enemy);
+  c.enemy.hp = Math.max(0, c.enemy.hp - dmg);
+  if(qteMult > 1.0) c.combo = Math.min(5, (c.combo||0) + 1);
+  if(isCrit || qteMult > 1.0) Sound.crit(); else Sound.attack();
+  const line = `${qteMult>1.0?'⚡ <b>PERFECT STRIKE!</b> ':''}You strike the ${c.enemy.name} for ${dmg} damage${isCrit?' — Critical!':''}.`;
+  if(c.enemy.hp <= 0){ handleEnemyDefeated(line); return; }
+  resolveEnemyTurn(line);
+}
+
+function computeOutgoingDamage(p, baseRaw, enemy, skillLifesteal){
+  let isCrit;
+  if(p.guaranteedCritNext){ isCrit = true; p.guaranteedCritNext = false; }
+  else { isCrit = Math.random()*100 < getCritChance(p, enemy); }
+  let raw = baseRaw;
+  if(isCrit) raw = Math.round(raw*1.5);
+  raw = Math.round(raw*(1+(p.talentMods.dmgPct||0)+(p.dungeonBuffs?p.dungeonBuffs.dmgPct||0:0)));
+
+  const comboCount = state.combat ? (state.combat.combo||0) : 0;
+  if(comboCount > 0) raw = Math.round(raw * (1 + comboCount * 0.10));
+
+  if((p.talentMods.executePct||0) > 0 && enemy.hp/enemy.maxHp < 0.3){
+    raw = Math.round(raw*(1+p.talentMods.executePct));
+  }
+  const dmg = Math.max(1, raw - enemy.def);
+  const totalLifesteal = (p.talentMods.lifesteal||0) + (skillLifesteal||0);
+  if(totalLifesteal > 0){
+    const heal = Math.round(dmg*totalLifesteal);
+    if(heal > 0) p.hp = Math.min(p.maxHp, p.hp + heal);
+  }
+
+  if(state.combat) state.combat.combo = Math.min(5, (state.combat.combo||0) + 1);
+
+  return { dmg, isCrit };
+}
+
+function combatAction(action){
+  const p = state.player;
+  const c = state.combat;
+  if(!c) return;
+  const cls = CLASSES[p.class];
+
+  if(action === 'flee'){
+    state.combat = null;
+    closeModal();
+    toast("You retreat to the city.");
+    return;
+  }
+
+  if(action === 'potion'){
+    if(p.consumables.potion <= 0) return;
+    p.consumables.potion--;
+    const heal = Math.round(p.maxHp*0.4);
+    p.hp = Math.min(p.maxHp, p.hp + heal);
+    Sound.heal();
+    resolveEnemyTurn(`You drink a Potion, restoring ${heal} HP.`);
+    return;
+  }
+
+  if(action === 'qte_attack'){
+    triggerQTEAttack();
+    return;
+  }
+
+  if(action === 'attack'){
+    executeNormalAttack(1.0);
+    return;
+  }
+
+  if(action.startsWith('skill_')){
+    const id = action.slice(6);
+    const sk = findSkillNode(p.class, id);
+    if(!sk || !p.unlockedSkills.includes(sk.id) || c.focus < sk.cost) return;
+    executeSkill(sk);
+  }
+}
+
+function executeSkill(sk){
+  const p = state.player;
+  const c = state.combat;
+  if(!c) return;
+  const cls = CLASSES[p.class];
+  const eff = getEffectiveStats(p);
+  c.focus -= sk.cost;
+
+  if(sk.type === 'heal'){
+    const heal = Math.round(p.maxHp * sk.healPct);
+    p.hp = Math.min(p.maxHp, p.hp + heal);
+    Sound.heal();
+    resolveEnemyTurn(`You channel ${sk.name}, restoring ${heal} HP.`);
+    return;
+  }
+  if(sk.type === 'shield'){
+    const amount = Math.round(eff.VIT * (sk.shieldMult||4));
+    p.shield = (p.shield||0) + amount;
+    Sound.heal();
+    resolveEnemyTurn(`You raise ${sk.name}, gaining a ${amount}-point shield.`);
+    return;
+  }
+  if(sk.type === 'crit_buff'){
+    p.guaranteedCritNext = true;
+    Sound.magic();
+    resolveEnemyTurn(`You focus with ${sk.name} — your next strike is guaranteed to crit.`);
+    return;
+  }
+  if(sk.type === 'evade'){
+    p.evadeNext = true;
+    Sound.magic();
+    resolveEnemyTurn(`You ready ${sk.name}, prepared to dodge the next attack.`);
+    return;
+  }
+  if(sk.type === 'dot'){
+    const dmgPerTurn = Math.max(1, Math.round(eff[cls.atkStat] * (sk.dotMult||0.8)));
+    c.enemy.dot = { dmg: dmgPerTurn, turns: sk.dotTurns||3 };
+    Sound.magic();
+    resolveEnemyTurn(`You afflict the ${c.enemy.name} with ${sk.name} (${dmgPerTurn} dmg/turn for ${sk.dotTurns||3} turns).`);
+    return;
+  }
+  if(sk.type === 'extra_turn'){
+    const baseRaw = Math.round((eff[cls.atkStat]*2 + 3) * sk.mult);
+    const { dmg, isCrit } = computeOutgoingDamage(p, baseRaw, c.enemy, sk.lifesteal);
+    c.enemy.hp = Math.max(0, c.enemy.hp - dmg);
+    if(isCrit) Sound.crit(); else Sound.magic();
+    const line = `You unleash ${sk.name}! ${dmg} damage${isCrit?' — Critical!':''}. Time bends — act again!`;
+    if(c.enemy.hp <= 0){ handleEnemyDefeated(line); return; }
+    refreshHud();
+    renderCombat(line);
+    return;
+  }
+
+  const hits = sk.hits || 1;
+  let totalDmg = 0, anyCrit = false;
+  for(let i=0;i<hits;i++){
+    let baseRaw = Math.round((eff[cls.atkStat]*2 + 3) * sk.mult);
+    if(sk.executeThreshold && c.enemy.hp/c.enemy.maxHp < sk.executeThreshold){
+      baseRaw = Math.round(baseRaw * sk.executeMult);
+    }
+    const { dmg, isCrit } = computeOutgoingDamage(p, baseRaw, c.enemy, sk.lifesteal);
+    c.enemy.hp = Math.max(0, c.enemy.hp - dmg);
+    totalDmg += dmg;
+    if(isCrit) anyCrit = true;
+    if(c.enemy.hp <= 0) break;
+  }
+  if(anyCrit) Sound.crit(); else Sound.attack();
+  const line = `You unleash ${sk.name}! ${totalDmg} damage${anyCrit?' — Critical!':''}.`;
+  if(c.enemy.hp <= 0){ handleEnemyDefeated(line); return; }
+  resolveEnemyTurn(line);
+}
+
+function resolveEnemyTurn(lineSoFar){
+  const p = state.player;
+  const c = state.combat;
+  if(!c) return;
+  const eff = getEffectiveStats(p);
+  let line = lineSoFar;
+
+  if(p.specialization === 'Necromancer' && c.enemy.hp > 0){
+    c.enemy.hp = Math.max(0, c.enemy.hp - 8);
+    line += ` 💀 Skeletal Minion strikes for 8 damage.`;
+    if(c.enemy.hp <= 0){ handleEnemyDefeated(line); return; }
+  }
+  if(p.specialization === 'Beast Master' && c.enemy.hp > 0){
+    c.enemy.hp = Math.max(0, c.enemy.hp - 10);
+    line += ` 🐺 Spirit Wolf bites for 10 damage.`;
+    if(c.enemy.hp <= 0){ handleEnemyDefeated(line); return; }
+  }
+  if(p.activeMercenary === 'ranger' && c.enemy.hp > 0){
+    c.enemy.hp = Math.max(0, c.enemy.hp - 10);
+    line += ` 🏹 Elven Ranger strikes for 10 bonus damage.`;
+    if(c.enemy.hp <= 0){ handleEnemyDefeated(line); return; }
+  }
+  if(p.activeMercenary === 'cleric'){
+    const heal = 12;
+    p.hp = Math.min(p.maxHp, p.hp + heal);
+    line += ` ☀️ Sun Cleric heals you for ${heal} HP.`;
+  }
+
+  if(c.enemy.dot && c.enemy.dot.turns > 0){
+    const dtick = c.enemy.dot.dmg;
+    c.enemy.hp = Math.max(0, c.enemy.hp - dtick);
+    c.enemy.dot.turns--;
+    line += ` Poison deals ${dtick} damage.`;
+    if(c.enemy.hp <= 0){ handleEnemyDefeated(line); return; }
+  }
+
+  if(p.evadeNext){
+    p.evadeNext = false;
+    line += ` You dodge the ${c.enemy.name}'s attack completely.`;
+    refreshHud();
+    renderCombat(line);
+    return;
+  }
+
+  const hits = (c.enemy.trait === 'vicious' && Math.random() < 0.3) ? 2 : 1;
+  let totalDmg = 0;
+  for(let i=0;i<hits;i++){ totalDmg += Math.max(1, c.enemy.atk - Math.floor(eff.VIT/2)); }
+  totalDmg = Math.max(1, Math.round(totalDmg * (1 + (p.talentMods.dmgTakenPct||0))));
+
+  if(p.activeMercenary === 'gryphon' && totalDmg > 0){
+    const absorbed = Math.round(totalDmg * 0.3);
+    totalDmg -= absorbed;
+    line += ` 🛡️ Gryphon Knight absorbs ${absorbed} damage.`;
+  }
+
+  if(p.shield > 0){
+    const absorbed = Math.min(p.shield, totalDmg);
+    p.shield -= absorbed;
+    totalDmg -= absorbed;
+    if(absorbed > 0) line += ` Your shield absorbs ${absorbed} damage.`;
+  }
+
+  if((p.activeIncantations||[]).includes('thorns') && totalDmg > 0 && c.enemy.hp > 0){
+    const reflectDmg = Math.max(1, Math.round(totalDmg * 0.25));
+    c.enemy.hp = Math.max(0, c.enemy.hp - reflectDmg);
+    line += ` 📜 Thorns reflects ${reflectDmg} damage back.`;
+    if(c.enemy.hp <= 0){ handleEnemyDefeated(line); return; }
+  }
+
+  if(p.evadeNext){
+    p.evadeNext = false;
+    line += ` You dodge the ${c.enemy.name}'s attack completely.`;
+    refreshHud();
+    renderCombat(line);
+    return;
+  }
+
+  const hits = (c.enemy.trait === 'vicious' && Math.random() < 0.3) ? 2 : 1;
+  let totalDmg = 0;
+  for(let i=0;i<hits;i++){ totalDmg += Math.max(1, c.enemy.atk - Math.floor(eff.VIT/2)); }
+  totalDmg = Math.max(1, Math.round(totalDmg * (1 + (p.talentMods.dmgTakenPct||0))));
+
+  if(p.shield > 0){
+    const absorbed = Math.min(p.shield, totalDmg);
+    p.shield -= absorbed;
+    totalDmg -= absorbed;
+    if(absorbed > 0) line += ` Your shield absorbs ${absorbed} damage.`;
+  }
+
+  if(totalDmg > 0 && c) c.combo = 0;
+
+  p.hp = Math.max(0, p.hp - totalDmg);
+  if(totalDmg > 0) line += ` The ${c.enemy.name} hits ${hits>1?`twice for ${totalDmg} total`:`back for ${totalDmg}`}.`;
+  else line += ` The ${c.enemy.name}'s attack is fully absorbed!`;
+
+  if(c.enemy.trait === 'regen' && c.enemy.hp > 0){
+    const heal = Math.round(c.enemy.maxHp*0.08);
+    c.enemy.hp = Math.min(c.enemy.maxHp, c.enemy.hp + heal);
+    line += ` It regenerates ${heal} HP.`;
+  }
+
+  if(p.hp <= 0){
+    if(p.talentMods.secondChance && !c.secondChanceUsed){
+      c.secondChanceUsed = true;
+      p.hp = 1;
+      line += ` Second Chance saves you from the killing blow!`;
+      refreshHud();
+      renderCombat(line);
+      return;
+    }
+    p.hp = Math.round(p.maxHp*0.3);
+    state.combat = null;
+    Sound.defeat();
+    refreshHud();
+    openModal(`
+      <h2>You Fall</h2>
+      <p class="desc">The dungeon proves too much this time. You're pulled back to the city gate, wounded but alive.</p>
+      <div class="modal-actions"><button class="primary" onclick="closeModal()">Return to City</button></div>
+    `);
+    return;
+  }
+
+  refreshHud();
+  renderCombat(line);
+}
+
+function toggleAutoBattle(){
+  const c = state.combat;
+  if(!c) return;
+  c.autoBattle = !c.autoBattle;
+  renderCombat(c.autoBattle ? "Auto-Battle activated." : "Auto-Battle paused.");
+}
+
+function toggleSpeed(){
+  const c = state.combat;
+  if(!c) return;
+  c.speed2x = !c.speed2x;
+  renderCombat(`Combat speed set to ${c.speed2x ? '2x' : '1x'}.`);
+}
+
+let autoTimer = null;
+function triggerAutoStep(){
+  const c = state.combat;
+  if(!c || !c.autoBattle) return;
+  const p = state.player;
+  clearTimeout(autoTimer);
+  const delay = c.speed2x ? 350 : 750;
+
+  autoTimer = setTimeout(()=>{
+    if(!state.combat || !state.combat.autoBattle) return;
+    if(p.hp / p.maxHp < 0.35 && p.consumables.potion > 0){
+      combatAction('potion');
+      return;
+    }
+    const skills = getUnlockedCombatSkills(p).filter(sk => c.focus >= sk.cost);
+    if(skills.length){
+      skills.sort((a,b)=>b.cost - a.cost);
+      combatAction('skill_' + skills[0].id);
+      return;
+    }
+    combatAction('attack');
+  }, delay);
+}
+
+function showShrineEvent(){
+  openModal(`
+    <h2>⛩️ Ancient Shrine of Blessing</h2>
+    <p class="desc">A glowing altar hums with celestial energy in the chamber center.</p>
+    <div class="choice-row">
+      <div class="choice-card" onclick="resolveShrine('blood')">
+        <div class="icon">🩸</div>
+        <div class="name">Blood Offering</div>
+        <div class="flavor">Sacrifice 15% Max HP for +25% Damage Dealt this dungeon.</div>
+      </div>
+      <div class="choice-card" onclick="resolveShrine('focus')">
+        <div class="icon">🧘</div>
+        <div class="name">Focus Meditation</div>
+        <div class="flavor">Start next combat with full Focus energy.</div>
+      </div>
+      <div class="choice-card" onclick="resolveShrine('leave')">
+        <div class="icon">🚶</div>
+        <div class="name">Pass By</div>
+        <div class="flavor">Leave the shrine untouched and proceed.</div>
+      </div>
+    </div>
+  `);
+}
+
+function resolveShrine(type){
+  const p = state.player;
+  const c = state.combat;
+  if(type === 'blood'){
+    const cost = Math.round(p.maxHp * 0.15);
+    p.hp = Math.max(1, p.hp - cost);
+    p.dungeonBuffs.dmgPct = (p.dungeonBuffs.dmgPct || 0) + 0.25;
+    toast('Blood Offering accepted! +25% Damage Dealt', 'var(--gold)');
+  } else if(type === 'focus'){
+    p.dungeonBuffs.focusStart = true;
+    toast('Focus Meditation complete! Start next fight with max Focus', 'var(--good)');
+  }
+  Sound.magic();
+  closeModal();
+  renderCombat(`You leave the Ancient Shrine behind and step into the next chamber.`);
+}
+
+function showChestEvent(){
+  openModal(`
+    <h2>🗝️ Sealed Ancient Chest</h2>
+    <p class="desc">An ornate ironbound chest sits in the corner, engraved with warning runes.</p>
+    <div class="choice-row">
+      <div class="choice-card" onclick="resolveChest('disarm')">
+        <div class="icon">🛠️</div>
+        <div class="name">Carefully Disarm</div>
+        <div class="flavor">75% success chance. Gain Gold + Iron Ore.</div>
+      </div>
+      <div class="choice-card" onclick="resolveChest('force')">
+        <div class="icon">💥</div>
+        <div class="name">Smash Open</div>
+        <div class="flavor">50% success chance. Higher risk of springing trap.</div>
+      </div>
+      <div class="choice-card" onclick="resolveChest('leave')">
+        <div class="icon">🚶</div>
+        <div class="name">Leave Chest</div>
+        <div class="flavor">Avoid risk and continue into the next room.</div>
+      </div>
+    </div>
+  `);
+}
+
+function resolveChest(type){
+  const p = state.player;
+  const c = state.combat;
+  if(type === 'leave'){
+    closeModal();
+    renderCombat(`You leave the chest untouched and step into the next chamber.`);
+    return;
+  }
+  const successChance = type === 'disarm' ? 0.75 : 0.50;
+  if(Math.random() < successChance){
+    const goldFound = Math.round(15 * (c ? c.dungeon.tierMult : 1));
+    const oreFound = Math.floor(Math.random()*3) + 2;
+    p.gold += goldFound;
+    p.materials.ironOre = (p.materials.ironOre||0) + oreFound;
+    Sound.loot();
+    toast(`Chest Opened! +${goldFound} gold, +${oreFound} Iron Ore!`, 'var(--gold)');
+    closeModal();
+    renderCombat(`You opened the chest! Found ${goldFound} gold and ${oreFound} Iron Ore.`);
+  } else {
+    const trapDmg = Math.round(p.maxHp * 0.2);
+    p.hp = Math.max(1, p.hp - trapDmg);
+    Sound.attack();
+    toast(`Trap Sprung! Took ${trapDmg} damage.`, 'var(--danger)');
+    closeModal();
+    renderCombat(`A poison trap fires as you open the chest! Took ${trapDmg} damage.`);
+  }
+}
+
+function createItem(rank){
+  const pool = ITEM_POOL[rank];
+  const t = pool[Math.floor(Math.random()*pool.length)];
+  return { id: itemIdCounter++, name: t.name, rank, slot: t.slot,
+    statBonus: {...t.statBonus}, critBonus: t.critBonus||0,
+    passiveXp: t.passiveXp ? {...t.passiveXp} : null };
+}
+function rollLoot(dungeonRank){
+  if(Math.random() > 0.55) return null;
+  const idx = RANKS.indexOf(dungeonRank);
+  const roll = Math.random();
+  let dropIdx = idx;
+  if(roll < 0.08 && idx > 0) dropIdx = idx-1;
+  else if(roll > 0.6 && idx < RANKS.length-1) dropIdx = idx+1;
+  const item = createItem(RANKS[dropIdx]);
+  state.player.inventory.push(item);
+  return item;
+}
+function grantGuaranteedItem(rank){
+  const item = createItem(rank);
+  state.player.inventory.push(item);
+  return item;
+}
+
+function handleEnemyDefeated(lineSoFar){
+  const p = state.player;
+  const c = state.combat;
+  const dungeon = c.dungeon;
+  const wasBoss = c.enemy.isBoss;
+  const gained = Math.round(c.enemy.xp * dungeon.xpMult * getXpMultiplier(p, dungeon.rank) * (1+(p.talentMods.xpPct||0)));
+  const lines = [lineSoFar, `The ${c.enemy.name} falls. +${gained} XP.`];
+
+  const oreDrop = Math.floor(Math.random()*2) + 1;
+  p.materials.ironOre = (p.materials.ironOre||0) + oreDrop;
+  lines.push(`+${oreDrop} Iron Ore.`);
+
+  if(wasBoss && dungeon.isSpire){
+    const levelLines = grantXp(gained);
+    levelLines.forEach(l=>lines.push(l));
+    p.spireFloor = (p.spireFloor||1) + 1;
+    const floor = p.spireFloor;
+    const goldReward = Math.round(25 * dungeon.tierMult);
+    p.gold += goldReward;
+    p.materials.ironOre = (p.materials.ironOre||0) + 2;
+    p.materials.shadowEssence = (p.materials.shadowEssence||0) + 1;
+    lines.push(`🏆 <b>Spire Floor ${floor-1} Cleared!</b>`);
+    lines.push(`+${goldReward} Gold, +2 Iron Ore, +1 Shadow Essence.`);
+
+    if((floor-1) % 10 === 0){
+      p.statPoints += 2;
+      const milestoneItem = grantGuaranteedItem('S');
+      lines.push(`⭐ <b>MILESTONE REWARD</b>: +2 Stat Points & ${milestoneItem.name} (${milestoneItem.rank}-Rank)!`);
+    }
+
+    state.combat = null;
+    refreshHud();
+    openModal(`
+      <h2>🏰 Spire Floor Cleared!</h2>
+      <p class="desc">${lines.join('<br>')}</p>
+      <div class="modal-actions">
+        <button class="primary" onclick="maybeShowPendingTalent(()=>enterSpireFloor())">Ascend to Floor ${floor}</button>
+        <button onclick="maybeShowPendingTalent(()=>closeModal())">Return to Town</button>
+      </div>
+    `);
+    return;
+  }
+
+  if(wasBoss && dungeon.isTrial){
+    const levelLines = grantXp(gained);
+    levelLines.forEach(l=>lines.push(l));
+    const oldRank = p.rank;
+    const newRank = dungeon.rank;
+    const cls = CLASSES[p.class];
+    p.stats[cls.atkStat] += (RANK_BONUS[newRank]-RANK_BONUS[oldRank]);
+    p.rank = newRank;
+    recomputeDerived(p);
+    p.hp = p.maxHp;
+    const rewardItem = grantGuaranteedItem(newRank);
+    lines.push(`You have ascended to <b>${newRank}-Rank</b>!`);
+    if(rewardItem) lines.push(`The flame grants you: ${rewardItem.name} (${rewardItem.rank}-Rank)!`);
+    state.combat = null;
+    refreshHud();
+    openModal(`
+      <h2>Ascension!</h2>
+      <p class="desc">${lines.join('<br>')}</p>
+      <div class="modal-actions"><button class="primary" onclick="maybeShowPendingTalent(()=>closeModal())">Continue</button></div>
+    `);
+    return;
+  }
+
+  const drop = rollLoot(dungeon.rank);
+  if(drop){
+    lines.push(`Loot: ${drop.name} (${drop.rank}-Rank)!`);
+    const colorVal = getComputedStyle(document.documentElement).getPropertyValue(`--rank-${drop.rank}`).trim();
+    toast(`Loot: ${drop.name} (${drop.rank}-Rank)`, colorVal);
+    Sound.loot();
+  }
+
+  const levelLines = grantXp(gained);
+  levelLines.forEach(l=>lines.push(l));
+
+  if(dungeon.isArena){
+    const arenaGold = Math.round(5*dungeon.tierMult);
+    p.gold += arenaGold;
+    lines.push(`+${arenaGold} gold.`);
+    dungeon.wave = (dungeon.wave||1) + 1;
+    dungeon.tierMult += 0.15;
+    dungeon.xpMult = 1 + (dungeon.tierMult-1)*0.3;
+    c.enemy = makeEnemy(dungeon, 'normal');
+    c.log = [];
+    refreshHud();
+    maybeShowPendingTalent(()=>renderCombat(lines.join(' ')));
+    return;
+  }
+
+  if(wasBoss){
+    p.dungeonClears[dungeon.rank] = (p.dungeonClears[dungeon.rank]||0) + 1;
+    p.dungeonClears.total++;
+    const goldReward = Math.round(10*dungeon.tierMult*(1+(p.talentMods.goldPct||0)));
+    p.gold += goldReward;
+    lines.push(`+${goldReward} gold.`);
+
+    const tomeChance = Math.min(10, 3 + dungeon.tierMult*1.5);
+    if(Math.random()*100 < tomeChance){
+      const candidates = unknownUniqueSkills(p);
+      if(candidates.length){
+        const uniq = candidates[Math.floor(Math.random()*candidates.length)];
+        const tome = { id: itemIdCounter++, name: `Tome of ${uniq.name}`, isTome:true, skillId: uniq.id, rank:'S' };
+        p.inventory.push(tome);
+        lines.push(`A rare Skill Tome falls: <b>Tome of ${uniq.name}</b>!`);
+        toast(`Rare drop: Tome of ${uniq.name}!`, 'var(--gold)');
+        Sound.loot();
+      }
+    }
+
+    state.combat = null;
+    refreshHud();
+    openModal(`
+      <h2>Dungeon Cleared</h2>
+      <p class="desc">${lines.join('<br>')}</p>
+      <p class="desc">You make your way back to the city, stronger than before.</p>
+      <div class="modal-actions"><button class="primary" onclick="maybeShowPendingTalent(()=>closeModal())">Return to City</button></div>
+    `);
+    return;
+  }
+
+  c.roomIndex++;
+  const isBossRoom = c.roomIndex >= c.totalRooms;
+  c.enemy = isBossRoom ? makeEnemy(dungeon,'boss') : makeEnemy(dungeon,'normal');
+  c.log = [];
+  refreshHud();
+
+  if(!isBossRoom && Math.random() < 0.35){
+    maybeShowPendingTalent(()=>{
+      if(Math.random() < 0.5) showShrineEvent();
+      else showChestEvent();
+    });
+    return;
+  }
+
+  maybeShowPendingTalent(()=>renderCombat(lines.join(' ')));
+}
+
+function grantXp(amount){
+  const p = state.player;
+  const extraLines = [];
+  p.xp += amount;
+  while(p.xp >= p.xpToNext){
+    p.xp -= p.xpToNext;
+    p.level++;
+    p.statPoints += 1;
+    p.xpToNext = Math.round(p.xpToNext * 1.35);
+    recomputeDerived(p);
+    p.hp = p.maxHp;
+    Sound.levelUp();
+    toast(`Level up! You are now Level ${p.level}.`, 'var(--gold)');
+    extraLines.push(`⭐ Level up! Now Level ${p.level} (+1 stat point).`);
+    const tier = TALENT_TIERS.find(t=>t.level===p.level);
+    if(tier && !(p.level in p.talentsChosen) && !p.pendingTalents.includes(p.level)){
+      p.pendingTalents.push(p.level);
+      extraLines.push(`✦ A new talent choice awaits (Level ${p.level}).`);
+    }
+  }
+  refreshHud();
+  return extraLines;
+}
+
+/* ================= STATS / INVENTORY ================= */
+document.getElementById('btnStats').addEventListener('click', openStats);
+document.getElementById('btnTree').addEventListener('click', openSkillTree);
+document.getElementById('btnInventory').addEventListener('click', openInventory);
+
+function openStats(){
+  if(!requireOutOfCombat()) return;
+  const p = state.player;
+  if(!p.class){
+    openModal(`
+      <button class="close-x" onclick="closeModal()">✕</button>
+      <h2>Character Sheet</h2>
+      <p class="desc">You haven't awakened yet. Visit the Sanctuary first.</p>
+      <div class="modal-actions"><button onclick="closeModal()">Close</button></div>
+    `);
+    return;
+  }
+  const eff = getEffectiveStats(p);
+  const { critBonus } = getGearMods(p);
+  const statRows = Object.keys(p.stats).map(stat => {
+    const gearBonus = eff[stat] - p.stats[stat];
+    return `
+    <div class="stat-row">
+      <span>${stat}</span>
+      <div class="stepper">
+        <span>${eff[stat]}${gearBonus!==0 ? ` <span style="color:${gearBonus>0?'var(--good)':'var(--danger)'}; font-size:11px;">(${gearBonus>0?'+':''}${gearBonus} gear)</span>` : ''}</span>
+        <button onclick="spendPoint('${stat}')" ${p.statPoints<=0?'disabled':''}>+</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  const skillList = p.unlockedSkills.length
+    ? p.unlockedSkills.map(id=>`<span class="skill-tag">${skillNameById(p.class,id)}</span>`).join('')
+    : `<span style="color:var(--ink-dim); font-size:12px;">None yet — visit the Skill Tree</span>`;
+
+  const talentList = Object.entries(p.talentsChosen).map(([lvl,optId])=>{
+    const tier = TALENT_TIERS.find(t=>t.level==lvl);
+    const opt = tier ? tier.options.find(o=>o.id===optId) : null;
+    return opt ? `<span class="skill-tag" style="color:var(--gold); border-color:var(--gold);">${opt.name}</span>` : '';
+  }).join('') || `<span style="color:var(--ink-dim); font-size:12px;">None yet</span>`;
+
+  const paragonText = p.paragonLevel > 0 ? ` · <b style="color:var(--gold)">Paragon ${p.paragonLevel} Sovereign</b>` : '';
+  const prestigeBtn = (p.level >= 30 && p.rank === 'S') 
+    ? `<button class="primary" onclick="prestigeAscend()">🌟 Paragon Ascension</button>` 
+    : '';
+
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h2>Character Sheet</h2>
+    <p class="desc">${p.rank}-Rank ${p.class} · Level ${p.level}${paragonText} · <b>${p.statPoints}</b> unspent point${p.statPoints===1?'':'s'}</p>
+    ${statRows}
+    <p class="desc" style="margin-top:10px; font-size:12px;">STR/INT/AGI power your attacks depending on class, VIT sets max HP and reduces damage taken, AGI also raises crit chance (currently ${getCritChance(p)}%${critBonus?`, includes +${critBonus}% from gear`:''}).</p>
+    <p class="desc" style="margin-top:4px;">Skills: ${skillList}</p>
+    <p class="desc" style="margin-top:4px;">Talents: ${talentList}</p>
+    <div class="modal-actions">
+      ${prestigeBtn}
+      <button onclick="openAchievements()">🏆 Achievements</button>
+      <button class="danger" onclick="resetGame()">Reset Progress</button>
+      <button class="primary" onclick="closeModal()">Close</button>
+    </div>
+  `);
+}
+
+function spendPoint(stat){
+  const p = state.player;
+  if(p.statPoints <= 0) return;
+  p.statPoints--;
+  p.stats[stat]++;
+  recomputeDerived(p);
+  refreshHud();
+  openStats();
+}
+
+function openInventory(){
+  if(!requireOutOfCombat()) return;
+  const p = state.player;
+  const slotOrder = ['weapon','armor','accessory'];
+  const slotLabel = { weapon:'Weapon', armor:'Armor', accessory:'Accessory' };
+
+  const equippedHtml = slotOrder.map(slot=>{
+    const it = p.equipment[slot];
+    if(!it) return `<div class="item-row"><span style="color:var(--ink-dim)">${slotLabel[slot]}: empty</span><span></span></div>`;
+    return `<div class="item-row">
+      <span><span class="rank-pill" style="background:${rankColor(it.rank)}22; color:${rankColor(it.rank)}; border:1px solid ${rankColor(it.rank)}">${it.rank}</span> ${slotLabel[slot]}: ${it.name}
+      <div style="color:var(--good); font-size:11px; margin-top:2px;">${statBonusText(it)}</div></span>
+      <button onclick="unequipItem('${slot}')">Unequip</button>
+    </div>`;
+  }).join('');
+
+  const invRows = p.inventory.length ? p.inventory.map(it => {
+    if(it.isTome){
+      const uniq = UNIQUE_SKILLS.find(u=>u.id===it.skillId);
+      return `<div class="item-row">
+        <span><span class="rank-pill" style="background:var(--gold)22; color:var(--gold); border:1px solid var(--gold)">Tome</span> ${it.name}
+        <div style="color:var(--ink-dim); font-size:11px; margin-top:2px;">${uniq?uniq.flavor:''}</div></span>
+        <button onclick="learnTome(${it.id})">Learn</button>
+      </div>`;
+    }
+    return `<div class="item-row">
+      <span><span class="rank-pill" style="background:${rankColor(it.rank)}22; color:${rankColor(it.rank)}; border:1px solid ${rankColor(it.rank)}">${it.rank}</span> ${it.name}
+      <div style="color:var(--ink-dim); font-size:11px; margin-top:2px;">${slotLabel[it.slot]} · ${statBonusText(it)}</div></span>
+      <button onclick="equipItem(${it.id})">Equip</button>
+    </div>`;
+  }).join('') : `<div class="empty-note">No unequipped items.</div>`;
+
+  const { active: activeSets } = getSetBonuses(p);
+  const setHtml = activeSets.length ? activeSets.map(s => `
+    <div class="item-row" style="border-color:${s.color}">
+      <span><span class="rank-pill" style="background:${s.color}22; color:${s.color}; border:1px solid ${s.color}">${s.name} (${s.tier}P Set)</span>
+      <div style="color:var(--good); font-size:11px; margin-top:2px;">${s.desc}</div></span>
+    </div>
+  `).join('') : `<div class="empty-note" style="padding:4px 0; font-size:11px;">Equip 2 or 4 gear items of the same set (Vanguard, Shadowweaver, Archon) to activate powerful Set Bonuses!</div>`;
+
+  openModal(`
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h2>Inventory</h2>
+    <p class="desc" style="margin-bottom:6px;">✨ Active Artifact Set Bonuses</p>
+    ${setHtml}
+    <p class="desc" style="margin:12px 0 6px;">Equipped Gear</p>
+    ${equippedHtml}
+    <p class="desc" style="margin:16px 0 6px;">Carried Items</p>
+    ${invRows}
+    <div class="modal-actions"><button class="primary" onclick="closeModal()">Close</button></div>
+  `);
+}
+
+function equipItem(id){
+  const p = state.player;
+  const idx = p.inventory.findIndex(it=>it.id===id);
+  if(idx === -1) return;
+  const item = p.inventory[idx];
+  p.inventory.splice(idx,1);
+  const prev = p.equipment[item.slot];
+  p.equipment[item.slot] = item;
+  if(prev) p.inventory.push(prev);
+  recomputeDerived(p);
+  refreshHud();
+  openInventory();
+  toast(`Equipped ${item.name}.`);
+}
+function unequipItem(slot){
+  const p = state.player;
+  const item = p.equipment[slot];
+  if(!item) return;
+  p.equipment[slot] = null;
+  p.inventory.push(item);
+  recomputeDerived(p);
+  refreshHud();
+  openInventory();
+}
+
+function saveGame(){
+  try {
+    localStorage.setItem('awakening_save_v3', JSON.stringify(state.player));
+  } catch(e){}
+}
+
+function loadGame(){
+  try {
+    const raw = localStorage.getItem('awakening_save_v3');
+    if(raw){
+      const data = JSON.parse(raw);
+      state.player = Object.assign(defaultPlayer(), data);
+      recomputeDerived(state.player);
+    }
+  } catch(e){}
+}
+
+function resetGame(){
+  if(confirm("Are you sure you want to reset your character progress?")){
+    localStorage.removeItem('awakening_save_v3');
+    state.player = defaultPlayer();
+    refreshHud();
+    closeModal();
+    toast('Progress reset.');
+  }
+}
+
+/* ================= BOOT ================= */
+loadGame();
+</script>
+</body>
+</html>
