@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Awakening — Dark Fantasy RPG</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Cinzel:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -357,34 +357,85 @@
   .branch-title { font-family: 'Cinzel', serif; font-size: 14px; margin: 16px 0 6px; color: var(--gold); border-bottom: 1px solid rgba(240,197,98,0.2); padding-bottom: 4px; }
   
   /* DPAD MOBILE */
-  .dpad { display: none; align-self: center; grid-template-columns: 56px 56px 56px; grid-template-rows: 56px 56px 56px; gap: 6px; margin-top: 8px; user-select: none; }
-  .dpad button { width: 56px; height: 56px; font-size: 20px; display: flex; align-items: center; justify-content: center; padding: 0; margin: 0; background: #161c36; border: 1px solid var(--panel-border); border-radius: 8px; color: #fff; }
-  .dpad .up { grid-column: 2; grid-row: 1; } .dpad .left { grid-column: 1; grid-row: 2; }
-  .dpad .down { grid-column: 2; grid-row: 2; } .dpad .right { grid-column: 3; grid-row: 2; }
+  .dpad { display: none; align-self: center; grid-template-columns: 52px 52px 52px; grid-template-rows: 52px 52px 52px; gap: 6px; margin-top: 8px; user-select: none; }
+  .dpad button { width: 52px; height: 52px; font-size: 20px; display: flex; align-items: center; justify-content: center; padding: 0; margin: 0; background: #161c36; border: 1px solid var(--panel-border); border-radius: 8px; color: #fff; cursor: pointer; touch-action: manipulation; }
+  .dpad button:active, .dpad button.active { background: var(--gold); color: #000; box-shadow: 0 0 12px var(--gold-glow); }
+  .dpad .up { grid-column: 2; grid-row: 1; }
+  .dpad .left { grid-column: 1; grid-row: 2; }
+  .dpad .down { grid-column: 2; grid-row: 2; }
+  .dpad .right { grid-column: 3; grid-row: 2; }
+  .dpad .action-btn { grid-column: 2; grid-row: 3; font-size: 11px; font-weight: 800; background: linear-gradient(135deg, #d6ae55, #9b7228); color: #000; border: none; border-radius: 8px; }
 
   /* RESPONSIVE MOBILE & TABLET LAYOUT */
   @media (max-width: 1024px) {
     .game-container { padding: 10px; gap: 10px; width: 100%; max-width: 100%; }
     .top-hud { display: flex; flex-direction: column; gap: 10px; padding: 10px; align-items: center; width: 100%; }
     .hud-hero-summary { width: 100%; justify-content: space-between; }
-    .top-nav-dock { width: 100%; overflow-x: auto; flex-wrap: nowrap; justify-content: flex-start; padding-bottom: 4px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    .top-nav-dock { width: 100%; overflow-x: auto; flex-wrap: nowrap; justify-content: flex-start; padding-bottom: 6px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    .top-nav-dock::-webkit-scrollbar { display: none; }
     .nav-tab { flex-shrink: 0; padding: 6px 12px; }
-    .hud-actions { width: 100%; justify-content: space-between; }
+    .hud-actions { width: 100%; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
     .main-stage-container { flex-direction: column; width: 100%; }
     .right-overlay-column { width: 100%; flex-direction: row; gap: 10px; }
     .minimap-card, .active-quest-card { flex: 1; min-width: 0; }
     .bottom-hud-row { grid-template-columns: 1fr 1fr; gap: 10px; }
-    .dpad { display: grid; }
   }
 
-  @media (max-width: 720px) {
+  @media (max-width: 768px) {
+    body { padding: 4px 4px 80px; }
     .game-container { padding: 6px; gap: 8px; border-radius: 8px; }
+    .top-hud { padding: 8px; gap: 8px; }
+    .hud-hero-summary { gap: 8px; flex-wrap: wrap; }
+    .bar-track-fancy { width: 70px; }
+    .bar-value { min-width: 40px; font-size: 9px; }
+    .nav-tab { padding: 4px 8px; font-size: 10px; }
+    .nav-tab .nav-icon { font-size: 13px; margin-bottom: 0; }
+    .main-stage-container { gap: 8px; }
+    #gameCanvas { width: 100%; height: auto; max-height: 50vh; object-fit: contain; }
+    .right-overlay-column { flex-direction: row; gap: 6px; }
+    .minimap-ring { width: 90px; height: 90px; }
+    #minimapCanvas { width: 86px; height: 86px; }
     .bottom-hud-row { grid-template-columns: 1fr; gap: 8px; }
-    .game-log-card, .hero-summary-card, .tabbed-inventory-card, .action-hotbar-card, .atmospheric-lore-card { height: auto; min-height: 140px; }
-    .inventory-grid-6x2 { grid-template-columns: repeat(6, 1fr); gap: 4px; }
-    .inv-slot-box { font-size: 16px; }
+    .game-log-card, .hero-summary-card, .tabbed-inventory-card, .action-hotbar-card, .atmospheric-lore-card { height: auto; min-height: 130px; padding: 8px; }
+    .inventory-grid-6x2 { grid-template-columns: repeat(6, 1fr); gap: 3px; }
+    .inv-slot-box { font-size: 15px; min-height: 32px; }
+    .hotbar-slots-row { flex-wrap: wrap; justify-content: center; gap: 4px; }
+    .hotbar-slot-box { width: 34px; height: 40px; }
+    .hotbar-slot-box.ultimate-slot { width: 40px; height: 44px; }
+
+    /* Floating Fixed Mobile DPAD */
+    .dpad {
+      display: grid !important;
+      position: fixed;
+      bottom: 12px;
+      left: 12px;
+      z-index: 999;
+      grid-template-columns: 46px 46px 46px;
+      grid-template-rows: 46px 46px 46px;
+      gap: 4px;
+      background: rgba(8, 11, 24, 0.92);
+      padding: 6px;
+      border-radius: 14px;
+      border: 1.5px solid var(--gold);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.85), 0 0 12px var(--gold-glow);
+      backdrop-filter: blur(10px);
+      user-select: none;
+      touch-action: none;
+    }
+    .dpad button { width: 46px; height: 46px; font-size: 16px; border-radius: 8px; background: #141830; }
+    .dpad .action-btn { width: 46px; height: 46px; font-size: 10px; }
+  }
+
+  @media (max-width: 480px) {
+    .overlay { padding: 6px; }
+    .modal { padding: 12px; max-width: 100%; max-height: 94vh; border-radius: 10px; }
+    .modal h2 { font-size: 16px; }
+    .choice-card { min-width: 75px; padding: 8px 4px; }
+    .choice-card .icon { font-size: 20px; }
+    .choice-card .name { font-size: 11px; }
     .right-overlay-column { flex-direction: column; }
-    .minimap-card { width: 100%; }
+    .inventory-grid-6x2 { grid-template-columns: repeat(6, 1fr); gap: 2px; }
+    .inv-slot-box { font-size: 13px; min-height: 28px; }
   }
 </style>
 </head>
@@ -618,6 +669,7 @@
   <button class="left" data-dir="left">◀</button>
   <button class="down" data-dir="down">▼</button>
   <button class="right" data-dir="right">▶</button>
+  <button class="action-btn" id="dpadInteractBtn">✋ E</button>
 </div>
 
 <script>
@@ -1359,14 +1411,24 @@ if(btnSoundEl){
   });
 }
 
-canvas.addEventListener('click', (e) => {
+function getScaledCanvasCoords(e) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / (rect.width || canvas.width);
+  const scaleY = canvas.height / (rect.height || canvas.height);
+  const clientX = (e.touches && e.touches.length > 0) ? e.touches[0].clientX : e.clientX;
+  const clientY = (e.touches && e.touches.length > 0) ? e.touches[0].clientY : e.clientY;
+  return {
+    x: (clientX - rect.left) * scaleX,
+    y: (clientY - rect.top) * scaleY
+  };
+}
+
+const handleCanvasInteract = (e) => {
   if(!isModalOpen()){
+    const coords = getScaledCanvasCoords(e);
     if(state.nearBuilding){
-      const rect = canvas.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const clickY = e.clientY - rect.top;
       const b = state.nearBuilding;
-      if(clickX >= b.x - 20 && clickX <= b.x + b.w + 20 && clickY >= b.y - 35 && clickY <= b.y + b.h + 20){
+      if(coords.x >= b.x - 20 && coords.x <= b.x + b.w + 20 && coords.y >= b.y - 35 && coords.y <= b.y + b.h + 20){
         handleEnter(b.id);
         return;
       }
@@ -1375,13 +1437,29 @@ canvas.addEventListener('click', (e) => {
       harvestSecret(state.nearSecret.idx);
     }
   }
-});
+};
+
+canvas.addEventListener('click', handleCanvasInteract);
+canvas.addEventListener('touchstart', (e) => {
+  handleCanvasInteract(e);
+}, {passive: true});
 
 const dirKeyMap = { up:'arrowup', down:'arrowdown', left:'arrowleft', right:'arrowright' };
 document.querySelectorAll('#dpad button').forEach(btn=>{
+  if (btn.classList.contains('action-btn')) {
+    const trigger = (e)=>{
+      if (e.cancelable) e.preventDefault();
+      Sound.init();
+      const btnPrompt = document.getElementById('btnPrompt');
+      if (btnPrompt && btnPrompt.onclick) btnPrompt.onclick();
+    };
+    btn.addEventListener('touchstart', trigger, {passive:false});
+    btn.addEventListener('click', trigger);
+    return;
+  }
   const key = dirKeyMap[btn.dataset.dir];
-  const press = (e)=>{ e.preventDefault(); Sound.init(); state.keys[key] = true; };
-  const release = (e)=>{ e.preventDefault(); state.keys[key] = false; };
+  const press = (e)=>{ if(e.cancelable) e.preventDefault(); Sound.init(); if(key) state.keys[key] = true; btn.classList.add('active'); };
+  const release = (e)=>{ if(e.cancelable) e.preventDefault(); if(key) state.keys[key] = false; btn.classList.remove('active'); };
   btn.addEventListener('touchstart', press, {passive:false});
   btn.addEventListener('touchend', release, {passive:false});
   btn.addEventListener('touchcancel', release, {passive:false});
@@ -1527,10 +1605,98 @@ function harvestSecret(idx){
   refreshHud();
 }
 
-const mapBgImage = new Image();
-mapBgImage.src = 'town_map.jpg';
-let mapBgLoaded = false;
-mapBgImage.onload = () => { mapBgLoaded = true; };
+function drawTownBackground(cycleSec) {
+  // Ground Base Gradient
+  const bgGrad = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 50, canvas.width/2, canvas.height/2, 400);
+  bgGrad.addColorStop(0, '#11162b');
+  bgGrad.addColorStop(0.6, '#0b0e1e');
+  bgGrad.addColorStop(1, '#050711');
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Cobblestone Pathways & Central Plaza
+  ctx.strokeStyle = 'rgba(214, 174, 85, 0.12)';
+  ctx.lineWidth = 18;
+  ctx.lineCap = 'round';
+
+  // Horizontal Avenues & Connecting Paths
+  ctx.beginPath();
+  ctx.moveTo(30, 65); ctx.lineTo(610, 65);
+  ctx.moveTo(40, 335); ctx.lineTo(600, 335);
+  ctx.moveTo(160, 65); ctx.lineTo(160, 335);
+  ctx.moveTo(320, 65); ctx.lineTo(320, 335);
+  ctx.moveTo(480, 65); ctx.lineTo(480, 335);
+  ctx.stroke();
+
+  // Central Courtyard Plaza Ring
+  ctx.beginPath();
+  ctx.arc(320, 205, 42, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(22, 28, 54, 0.6)';
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(240, 197, 98, 0.25)';
+  ctx.stroke();
+
+  // Building Structures & Visual Icons
+  BUILDINGS.forEach(b => {
+    // Ground Shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+    ctx.beginPath();
+    ctx.ellipse(b.x + b.w/2, b.y + b.h + 2, b.w/2 + 4, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Building Body Frame
+    const isNear = state.nearBuilding && state.nearBuilding.id === b.id;
+    const bGrad = ctx.createLinearGradient(b.x, b.y, b.x, b.y + b.h);
+    bGrad.addColorStop(0, isNear ? 'rgba(32, 42, 80, 0.95)' : 'rgba(16, 22, 44, 0.9)');
+    bGrad.addColorStop(1, isNear ? 'rgba(18, 24, 48, 0.95)' : 'rgba(9, 12, 26, 0.9)');
+    
+    ctx.fillStyle = bGrad;
+    ctx.strokeStyle = isNear ? '#FEF08A' : (b.accent || 'rgba(214, 174, 85, 0.35)');
+    ctx.lineWidth = isNear ? 2 : 1;
+
+    ctx.beginPath();
+    if(ctx.roundRect){
+      ctx.roundRect(b.x, b.y, b.w, b.h, 8);
+    } else {
+      ctx.rect(b.x, b.y, b.w, b.h);
+    }
+    ctx.fill();
+    ctx.stroke();
+
+    // Special Building Effects (Water ripple for Pond, Energy Ring for Portal)
+    if(b.id === 'pond'){
+      ctx.fillStyle = 'rgba(14, 116, 144, 0.35)';
+      ctx.beginPath();
+      ctx.arc(b.x + b.w/2, b.y + b.h/2 + 6, 18, 0, Math.PI * 2);
+      ctx.fill();
+    } else if(b.id === 'portal'){
+      ctx.strokeStyle = 'rgba(140, 82, 255, 0.6)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(b.x + b.w/2, b.y + b.h/2 + 6, 16, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Building Icon Graphic
+    ctx.font = "20px Inter, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(b.icon, b.x + b.w/2, b.y + 20);
+  });
+
+  // Time of Day Lighting Overlay
+  if(cycleSec >= 150){
+    ctx.fillStyle = 'rgba(120, 20, 20, 0.14)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  } else if(cycleSec >= 90){
+    ctx.fillStyle = 'rgba(10, 18, 45, 0.18)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  } else if(cycleSec >= 60){
+    ctx.fillStyle = 'rgba(120, 60, 20, 0.08)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+}
 
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
@@ -1542,13 +1708,8 @@ function draw(){
   else if(cycleSec >= 90){ timeLabel = "🌙 Night"; }
   else if(cycleSec >= 60){ timeLabel = "🌆 Dusk"; }
 
-  // Draw Rich 2.5D Town Map Background Image from Reference Art (Cropped to town scene only)
-  if(mapBgLoaded){
-    ctx.drawImage(mapBgImage, 0, 80, 1024, 420, 0, 0, canvas.width, canvas.height);
-  } else {
-    ctx.fillStyle = "#0B1020";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-  }
+  // Render Clean Procedural Canvas Town Map
+  drawTownBackground(cycleSec);
 
   // Update Weather Badge in Top HUD
   const weatherEl = document.getElementById('hudWeatherBadge');
