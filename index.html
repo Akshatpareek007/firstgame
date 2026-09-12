@@ -358,39 +358,38 @@
   .dungeon-card.locked { opacity: 0.45; }
   .dungeon-card .info .name { font-family: 'Cinzel', serif; font-size: 14px; font-weight: 700; color: #fff; }
   .dungeon-card .info .meta { font-size: 11px; color: var(--ink-dim); margin-top: 2px; }
-  .branch-title { font-family: 'Cinzel', serif; font-size: 14px; margin: 16px 0 6px; color: var(--gold); border-bottom: 1px solid rgba(240,197,98,0.2); padding-bottom: 4px; }
-  /* SEMI-TRANSPARENT TOUCH DPAD (INSIDE CANVAS BOTTOM-LEFT) */
+  .branch-title { font-family: 'Cinzel', serif; font-size: 14px; margin: 16px 0 6px; color: var(--gold); border-bottom: 1px solid rgba(240,197,98,0.2); padding-bottom: 4px; }  /* SEMI-TRANSPARENT TOUCH DPAD (INSIDE CANVAS BOTTOM-LEFT) */
   .dpad {
     display: none;
     position: absolute;
-    bottom: 10px;
-    left: 10px;
-    z-index: 35;
-    grid-template-columns: 38px 38px 38px;
-    grid-template-rows: 38px 38px 38px;
+    bottom: 8px;
+    left: 8px;
+    z-index: 40;
+    grid-template-columns: 36px 36px 36px;
+    grid-template-rows: 36px 36px 36px;
     gap: 3px;
-    background: rgba(8, 10, 22, 0.45);
-    padding: 5px;
-    border-radius: 12px;
-    border: 1px solid rgba(240, 197, 98, 0.3);
+    background: rgba(6, 8, 18, 0.45);
+    padding: 4px;
+    border-radius: 10px;
+    border: 1.5px solid rgba(240, 197, 98, 0.35);
     box-shadow: 0 4px 16px rgba(0,0,0,0.5);
     backdrop-filter: blur(4px);
     user-select: none;
     touch-action: none;
   }
   .dpad button {
-    width: 38px; height: 38px; font-size: 15px;
+    width: 36px; height: 36px; font-size: 14px;
     display: flex; align-items: center; justify-content: center;
     padding: 0; margin: 0;
-    background: rgba(22, 28, 54, 0.55);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    border-radius: 8px; color: rgba(255, 255, 255, 0.85);
+    background: rgba(22, 28, 54, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px; color: rgba(255, 255, 255, 0.9);
     cursor: pointer; touch-action: manipulation;
     transition: all 0.15s ease;
   }
   .dpad button:active, .dpad button.active {
-    background: rgba(240, 197, 98, 0.75); color: #000;
-    box-shadow: 0 0 10px rgba(240, 197, 98, 0.6);
+    background: rgba(240, 197, 98, 0.85); color: #000;
+    box-shadow: 0 0 10px rgba(240, 197, 98, 0.7);
   }
   .dpad .up { grid-column: 2; grid-row: 1; }
   .dpad .left { grid-column: 1; grid-row: 2; }
@@ -398,42 +397,66 @@
   .dpad .right { grid-column: 3; grid-row: 2; }
   .dpad .action-btn {
     grid-column: 2; grid-row: 3; font-size: 9px; font-weight: 800;
-    background: rgba(214, 174, 85, 0.75); color: #000; border: none; border-radius: 8px;
+    background: rgba(214, 174, 85, 0.8); color: #000; border: none; border-radius: 6px;
   }
 
   /* RESPONSIVE MOBILE & TABLET LAYOUT (SINGLE SCREEN - NO SCROLL) */
   @media (max-width: 1024px) {
-    .game-container { padding: 8px; gap: 8px; width: 100%; max-width: 100%; height: calc(100vh - 12px); max-height: calc(100vh - 12px); overflow: hidden; }
-    .top-hud { display: flex; flex-direction: row; gap: 8px; padding: 4px 8px; align-items: center; width: 100%; flex-shrink: 0; }
+    html, body { margin: 0; padding: 0; width: 100vw; height: 100vh; max-height: 100vh; overflow: hidden !important; }
+    .game-container { padding: 6px; gap: 6px; width: 100%; max-width: 100%; height: calc(100vh - 12px); max-height: calc(100vh - 12px); overflow: hidden !important; }
+    .top-hud { display: flex; flex-direction: row; gap: 6px; padding: 4px 8px; align-items: center; width: 100%; flex-shrink: 0; }
     .hud-hero-summary { gap: 6px; }
-    .top-nav-dock { width: 100%; overflow-x: auto; flex-wrap: nowrap; justify-content: flex-start; padding-bottom: 4px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    .top-nav-dock { width: 100%; overflow-x: auto; flex-wrap: nowrap; justify-content: flex-start; padding-bottom: 2px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
     .top-nav-dock::-webkit-scrollbar { display: none; }
-    .nav-tab { flex-shrink: 0; padding: 4px 8px; font-size: 10px; }
+    .nav-tab { flex-shrink: 0; padding: 3px 8px; font-size: 10px; }
     .hud-actions { justify-content: flex-end; flex-wrap: wrap; gap: 4px; }
     .main-stage-container { flex-direction: row; width: 100%; flex: 1; min-height: 0; overflow: hidden; }
-    .right-overlay-column { width: 180px; flex-direction: column; gap: 6px; flex-shrink: 0; }
-    .bottom-hud-row { grid-template-columns: 1.2fr 1fr 1fr; gap: 8px; height: 100px; flex-shrink: 0; }
+    .right-overlay-column { width: 170px; flex-direction: column; gap: 6px; flex-shrink: 0; }
+    .bottom-hud-row { grid-template-columns: 1.2fr 1fr 1fr; gap: 6px; height: 95px; flex-shrink: 0; }
     .dpad { display: grid !important; }
   }
 
   @media (max-width: 768px) {
-    .game-container { padding: 6px; gap: 6px; height: calc(100vh - 8px); max-height: calc(100vh - 8px); overflow: hidden; }
-    .top-hud { flex-direction: column; gap: 6px; padding: 6px; }
+    html, body { margin: 0; padding: 0; width: 100vw; height: 100vh; max-height: 100vh; overflow: hidden !important; }
+    .game-container { padding: 4px; gap: 4px; height: calc(100vh - 8px); max-height: calc(100vh - 8px); overflow: hidden !important; }
+    .top-hud { flex-direction: column; gap: 4px; padding: 4px; }
     .hud-hero-summary { width: 100%; justify-content: space-between; }
     .hud-actions { width: 100%; justify-content: space-between; }
-    .main-stage-container { flex-direction: column; gap: 6px; flex: 1; min-height: 0; overflow: hidden; }
-    .right-overlay-column { width: 100%; flex-direction: row; gap: 6px; flex-shrink: 0; }
-    .bottom-hud-row { grid-template-columns: 1fr 1fr; gap: 6px; height: 95px; flex-shrink: 0; }
-    .game-log-card, .action-hotbar-card { height: 100%; padding: 6px; }
+    .main-stage-container { flex-direction: column; gap: 4px; flex: 1; min-height: 0; overflow: hidden; }
+    .right-overlay-column { width: 100%; flex-direction: row; gap: 4px; flex-shrink: 0; }
+    .active-quest-card { padding: 4px 8px; }
+    .quest-tracker-obj { font-size: 10px; margin-bottom: 2px; }
+    .bottom-hud-row { grid-template-columns: 1fr 1fr; gap: 4px; height: 85px; flex-shrink: 0; }
+    .game-log-card, .action-hotbar-card { height: 100%; padding: 4px 6px; }
+
+    /* Strict Canvas-Bound Semi-Transparent Mobile DPAD */
+    .dpad {
+      display: grid !important;
+      position: absolute !important;
+      bottom: 8px !important;
+      left: 8px !important;
+      z-index: 40 !important;
+      grid-template-columns: 34px 34px 34px;
+      grid-template-rows: 34px 34px 34px;
+      gap: 3px;
+      background: rgba(6, 8, 18, 0.45) !important;
+      padding: 4px;
+      border-radius: 10px;
+      border: 1.5px solid rgba(240, 197, 98, 0.35);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+      backdrop-filter: blur(4px);
+    }
+    .dpad button { width: 34px; height: 34px; font-size: 14px; border-radius: 6px; background: rgba(22, 28, 54, 0.6); }
+    .dpad .action-btn { width: 34px; height: 34px; font-size: 9px; }
   }
 
   @media (max-width: 480px) {
-    .overlay { padding: 6px; }
-    .modal { padding: 12px; max-width: 100%; max-height: 94vh; border-radius: 10px; }
-    .modal h2 { font-size: 16px; }
-    .choice-card { min-width: 75px; padding: 8px 4px; }
-    .choice-card .icon { font-size: 20px; }
-    .choice-card .name { font-size: 11px; }
+    .overlay { padding: 4px; }
+    .modal { padding: 10px; max-width: 100%; max-height: 94vh; border-radius: 10px; }
+    .modal h2 { font-size: 15px; }
+    .choice-card { min-width: 70px; padding: 6px 4px; }
+    .choice-card .icon { font-size: 18px; }
+    .choice-card .name { font-size: 10px; }
     .right-overlay-column { flex-direction: column; }
   }
 </style>
