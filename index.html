@@ -25,36 +25,38 @@
     --rank-D: #a0a5b5; --rank-C: #2ed573; --rank-B: #4a90e2; --rank-A: #b83bfa; --rank-S: #f0c562;
   }
   *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;width:100%;height:100%;overflow-x:hidden;}
+  html,body{margin:0;padding:0;width:100vw;height:100vh;overflow:hidden;}
   body{
     background: #05060c radial-gradient(circle at 50% 20%, #15182e 0%, #05060c 80%);
-    color: var(--ink); font-family: 'Inter', sans-serif; min-height:100vh;
+    color: var(--ink); font-family: 'Inter', sans-serif; height:100vh;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
-    padding: 12px 10px 24px; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+    padding: 6px; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
   }
   
   /* Scrollbar */
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: rgba(5,6,12,0.8); }
   ::-webkit-scrollbar-thumb { background: rgba(140,82,255,0.4); border-radius: 4px; border: 1px solid var(--panel-border); }
   ::-webkit-scrollbar-thumb:hover { background: var(--gold); }
 
   h1,h2,h3,h4{ font-family:'Cinzel', serif; font-weight:700; margin:0; letter-spacing: 0.5px; }
 
-  /* GAME CONTAINER */
+  /* GAME CONTAINER (SINGLE SCREEN FIT - NO SCROLL) */
   .game-container {
-    width: 100%; max-width: 1160px; display: flex; flex-direction: column; gap: 12px;
+    width: 100%; max-width: 1280px; height: calc(100vh - 12px); max-height: calc(100vh - 12px);
+    display: flex; flex-direction: column; gap: 8px;
     background: rgba(8, 10, 20, 0.75); border: 1px solid var(--panel-border);
     box-shadow: 0 16px 48px rgba(0,0,0,0.8), 0 0 30px var(--panel-glow);
-    border-radius: 14px; padding: 14px; backdrop-filter: blur(16px);
+    border-radius: 12px; padding: 8px 12px; backdrop-filter: blur(16px);
+    overflow: hidden;
   }
 
   /* TOP CINEMATIC HUD */
   .top-hud {
-    display: grid; grid-template-columns: 280px 1fr auto; align-items: center; gap: 16px;
+    display: grid; grid-template-columns: 240px 1fr auto; align-items: center; gap: 12px;
     background: rgba(10, 14, 26, 0.96); border: 1px solid var(--panel-border);
-    border-radius: 12px; padding: 8px 16px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.08);
+    border-radius: 10px; padding: 4px 12px; flex-shrink: 0;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08);
   }
 
   .hud-hero-summary { display: flex; align-items: center; gap: 12px; }
@@ -127,22 +129,23 @@
   .icon-btn:hover { border-color: var(--gold); color: #fff; background: rgba(30, 40, 75, 0.9); }
 
   /* MAIN STAGE LAYOUT */
-  .main-stage-container { display: flex; gap: 14px; position: relative; width: 100%; }
-  .canvas-world-column { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-  .right-overlay-column { width: 210px; display: flex; flex-direction: column; gap: 12px; flex-shrink: 0; }
+  .main-stage-container { display: flex; gap: 10px; position: relative; width: 100%; flex: 1; min-height: 0; overflow: hidden; }
+  .canvas-world-column { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+  .right-overlay-column { width: 210px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
 
   /* CANVAS WRAPPER */
   .canvas-wrap {
-    flex: 1; min-width: 0; position: relative; border-radius: 12px; overflow: hidden;
+    flex: 1; min-width: 0; min-height: 0; position: relative; border-radius: 10px; overflow: hidden;
     border: 1px solid var(--panel-border); box-shadow: 0 0 24px rgba(0,0,0,0.6); background: #080a16;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
   }
-  #gameCanvas { display: block; width: 100%; height: auto; background: #0b0d1e; }
+  #gameCanvas { display: block; width: 100%; height: 100%; object-fit: contain; flex: 1; min-height: 0; background: #0b0d1e; }
 
   /* INTERACTION PROMPT BAR */
   .location-prompt-bar {
     width: 100%; background: rgba(14, 18, 34, 0.95); border-top: 1px solid var(--panel-border);
-    padding: 8px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08); z-index: 10;
+    padding: 5px 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08); z-index: 10; flex-shrink: 0;
   }
   .prompt-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
   .prompt-icon { font-size: 22px; flex-shrink: 0; }
@@ -187,15 +190,16 @@
   .quest-tracker-obj { font-size: 11px; color: var(--ink-dim); line-height: 1.4; margin-bottom: 4px; }
   .quest-tracker-reward { font-size: 10.5px; color: var(--cyan); font-weight: 600; }
 
-  /* BOTTOM HUD ROW (5 PANELS) */
+  /* BOTTOM HUD ROW */
   .bottom-hud-row {
-    display: grid; grid-template-columns: 240px 180px 1fr 210px 190px; gap: 12px; width: 100%;
+    display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 10px; width: 100%;
+    height: 110px; flex-shrink: 0;
   }
 
   /* PANEL 1: GAME CHAT / LOG */
   .game-log-card {
     background: var(--panel-bg); border: 1px solid var(--panel-border);
-    border-radius: 12px; padding: 10px; display: flex; flex-direction: column; height: 165px;
+    border-radius: 10px; padding: 6px 10px; display: flex; flex-direction: column; height: 100%; overflow: hidden;
   }
   .chat-tabs { display: flex; gap: 6px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px; margin-bottom: 6px; }
   .chat-tab { font-size: 10.5px; font-weight: 600; color: var(--ink-dim); cursor: pointer; padding: 2px 6px; border-radius: 4px; }
@@ -489,6 +493,7 @@
 
     <!-- TOP RIGHT: RESOURCES & SYSTEM ACTIONS -->
     <div class="hud-actions">
+      <div class="res-pill" id="hudWeatherBadge" title="World Time">☀️ Day</div>
       <div class="res-pill" title="Gold Coins">🪙 <span id="hudGold">2,450</span> <button class="plus-btn" onclick="openShop()">+</button></div>
       <div class="res-pill" title="Shadow Essence">💎 <span id="hudEssence">120</span> <button class="plus-btn" onclick="openShop()">+</button></div>
       <button id="btnSound" class="icon-btn" title="Toggle Audio">🔊</button>
@@ -519,20 +524,8 @@
       </div>
     </div>
 
-    <!-- RIGHT FLOATING COLUMN: CIRCULAR MINIMAP & ACTIVE QUEST TRACKER -->
+    <!-- RIGHT FLOATING COLUMN: ACTIVE QUEST TRACKER -->
     <div class="right-overlay-column">
-      <!-- CIRCULAR MINIMAP WIDGET -->
-      <div class="minimap-card">
-        <div class="minimap-ring">
-          <canvas id="minimapCanvas" width="120" height="120"></canvas>
-          <span class="compass-label compass-n">N</span>
-          <span class="compass-label compass-e">E</span>
-          <span class="compass-label compass-s">S</span>
-          <span class="compass-label compass-w">W</span>
-        </div>
-        <div class="sun-moon-badge" id="hudWeatherBadge" title="World Time">☀️</div>
-      </div>
-
       <!-- ACTIVE QUEST TRACKER CARD -->
       <div class="active-quest-card" id="questTrackerWidget">
         <div class="quest-tracker-title-row">
