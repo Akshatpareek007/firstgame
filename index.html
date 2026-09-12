@@ -359,16 +359,15 @@
   .dungeon-card .info .name { font-family: 'Cinzel', serif; font-size: 14px; font-weight: 700; color: #fff; }
   .dungeon-card .info .meta { font-size: 11px; color: var(--ink-dim); margin-top: 2px; }
   .branch-title { font-family: 'Cinzel', serif; font-size: 14px; margin: 16px 0 6px; color: var(--gold); border-bottom: 1px solid rgba(240,197,98,0.2); padding-bottom: 4px; }
-  
-  /* DPAD MOBILE */
-  .dpad { display: none; align-self: center; grid-template-columns: 52px 52px 52px; grid-template-rows: 52px 52px 52px; gap: 6px; margin-top: 8px; user-select: none; }
-  .dpad button { width: 52px; height: 52px; font-size: 20px; display: flex; align-items: center; justify-content: center; padding: 0; margin: 0; background: #161c36; border: 1px solid var(--panel-border); border-radius: 8px; color: #fff; cursor: pointer; touch-action: manipulation; }
-  .dpad button:active, .dpad button.active { background: var(--gold); color: #000; box-shadow: 0 0 12px var(--gold-glow); }
+    /* DPAD MOBILE CONTROLLER */
+  .dpad { display: none; align-self: center; grid-template-columns: 46px 46px 46px; grid-template-rows: 46px 46px 46px; gap: 4px; margin: 8px auto 0; user-select: none; }
+  .dpad button { width: 46px; height: 46px; font-size: 18px; display: flex; align-items: center; justify-content: center; padding: 0; margin: 0; background: #161c36; border: 1px solid var(--panel-border); border-radius: 8px; color: #fff; cursor: pointer; touch-action: manipulation; }
+  .dpad button:active, .dpad button.active { background: var(--gold); color: #000; box-shadow: 0 0 10px var(--gold-glow); }
   .dpad .up { grid-column: 2; grid-row: 1; }
   .dpad .left { grid-column: 1; grid-row: 2; }
   .dpad .down { grid-column: 2; grid-row: 2; }
   .dpad .right { grid-column: 3; grid-row: 2; }
-  .dpad .action-btn { grid-column: 2; grid-row: 3; font-size: 11px; font-weight: 800; background: linear-gradient(135deg, #d6ae55, #9b7228); color: #000; border: none; border-radius: 8px; }
+  .dpad .action-btn { grid-column: 2; grid-row: 3; font-size: 10px; font-weight: 800; background: linear-gradient(135deg, #d6ae55, #9b7228); color: #000; border: none; border-radius: 8px; }
 
   /* RESPONSIVE MOBILE & TABLET LAYOUT */
   @media (max-width: 1024px) {
@@ -381,53 +380,39 @@
     .hud-actions { width: 100%; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
     .main-stage-container { flex-direction: column; width: 100%; }
     .right-overlay-column { width: 100%; flex-direction: row; gap: 10px; }
-    .minimap-card, .active-quest-card { flex: 1; min-width: 0; }
     .bottom-hud-row { grid-template-columns: 1fr 1fr; gap: 10px; }
   }
 
   @media (max-width: 768px) {
-    body { padding: 4px 4px 80px; }
-    .game-container { padding: 6px; gap: 8px; border-radius: 8px; }
+    html, body { overflow-y: auto; height: auto; }
+    .game-container { height: auto; max-height: none; overflow: visible; padding: 6px; gap: 8px; }
     .top-hud { padding: 8px; gap: 8px; }
     .hud-hero-summary { gap: 8px; flex-wrap: wrap; }
     .bar-track-fancy { width: 70px; }
     .bar-value { min-width: 40px; font-size: 9px; }
     .nav-tab { padding: 4px 8px; font-size: 10px; }
     .nav-tab .nav-icon { font-size: 13px; margin-bottom: 0; }
-    .main-stage-container { gap: 8px; }
+    .main-stage-container { gap: 8px; flex-direction: column; height: auto; }
     #gameCanvas { width: 100%; height: auto; max-height: 50vh; object-fit: contain; }
     .right-overlay-column { flex-direction: row; gap: 6px; }
-    .minimap-ring { width: 90px; height: 90px; }
-    #minimapCanvas { width: 86px; height: 86px; }
-    .bottom-hud-row { grid-template-columns: 1fr; gap: 8px; }
-    .game-log-card, .hero-summary-card, .tabbed-inventory-card, .action-hotbar-card, .atmospheric-lore-card { height: auto; min-height: 130px; padding: 8px; }
-    .inventory-grid-6x2 { grid-template-columns: repeat(6, 1fr); gap: 3px; }
-    .inv-slot-box { font-size: 15px; min-height: 32px; }
-    .hotbar-slots-row { flex-wrap: wrap; justify-content: center; gap: 4px; }
-    .hotbar-slot-box { width: 34px; height: 40px; }
-    .hotbar-slot-box.ultimate-slot { width: 40px; height: 44px; }
+    .bottom-hud-row { grid-template-columns: 1fr; gap: 8px; height: auto; }
+    .game-log-card, .action-hotbar-card { height: auto; min-height: 120px; padding: 8px; }
 
-    /* Floating Fixed Mobile DPAD */
+    /* Inline Non-Overlapping Mobile DPAD */
     .dpad {
       display: grid !important;
-      position: fixed;
-      bottom: 12px;
-      left: 12px;
-      z-index: 999;
-      grid-template-columns: 46px 46px 46px;
-      grid-template-rows: 46px 46px 46px;
-      gap: 4px;
-      background: rgba(8, 11, 24, 0.92);
+      position: relative;
+      bottom: auto; left: auto;
+      margin: 8px auto 4px;
+      background: rgba(10, 14, 28, 0.92);
       padding: 6px;
-      border-radius: 14px;
+      border-radius: 12px;
       border: 1.5px solid var(--gold);
-      box-shadow: 0 8px 30px rgba(0,0,0,0.85), 0 0 12px var(--gold-glow);
-      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+      backdrop-filter: blur(8px);
       user-select: none;
-      touch-action: none;
+      align-self: center;
     }
-    .dpad button { width: 46px; height: 46px; font-size: 16px; border-radius: 8px; background: #141830; }
-    .dpad .action-btn { width: 46px; height: 46px; font-size: 10px; }
   }
 
   @media (max-width: 480px) {
@@ -438,8 +423,6 @@
     .choice-card .icon { font-size: 20px; }
     .choice-card .name { font-size: 11px; }
     .right-overlay-column { flex-direction: column; }
-    .inventory-grid-6x2 { grid-template-columns: repeat(6, 1fr); gap: 2px; }
-    .inv-slot-box { font-size: 13px; min-height: 28px; }
   }
 </style>
 </head>
@@ -521,6 +504,14 @@
           </div>
           <button id="btnPrompt" class="btn-fantasy primary-glow" style="flex-shrink:0;">ENTER [E / TAP]</button>
         </div>
+      </div>
+      <!-- INLINE MOBILE CONTROLLER DOCK -->
+      <div class="dpad" id="dpad">
+        <button class="up" data-dir="up">▲</button>
+        <button class="left" data-dir="left">◀</button>
+        <button class="down" data-dir="down">▼</button>
+        <button class="right" data-dir="right">▶</button>
+        <button class="action-btn" id="dpadInteractBtn">✋ E</button>
       </div>
     </div>
 
@@ -619,14 +610,6 @@
   <span id="statAGI"></span>
   <button id="btnInventory" onclick="openInventory()"></button>
   <div id="inventoryGrid6x2"></div>
-</div>
-
-<div class="dpad" id="dpad">
-  <button class="up" data-dir="up">▲</button>
-  <button class="left" data-dir="left">◀</button>
-  <button class="down" data-dir="down">▼</button>
-  <button class="right" data-dir="right">▶</button>
-  <button class="action-btn" id="dpadInteractBtn">✋ E</button>
 </div>
 
 <!-- MODAL OVERLAY & TOAST CONTAINERS -->
