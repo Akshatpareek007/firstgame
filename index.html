@@ -547,7 +547,7 @@
     </div>
   </div>
 
-  <!-- BOTTOM HUD ROW (5 PANELS ACROSS THE BOTTOM) -->
+  <!-- BOTTOM HUD ROW (CLEAN 3 PANELS) -->
   <div class="bottom-hud-row">
     <!-- PANEL 1: GAME CHAT / SYSTEM LOG -->
     <div class="game-log-card" id="gameLogPanel">
@@ -565,66 +565,9 @@
       </div>
     </div>
 
-    <!-- PANEL 2: HERO SUMMARY CARD -->
-    <div class="hero-summary-card" id="heroSummaryCard">
-      <div class="hero-summary-top">
-        <div class="hero-portrait-mini" id="summaryAvatarIcon">⚔️</div>
-        <div>
-          <div style="font-family:'Cinzel',serif; font-weight:700; font-size:13px; color:#fff;">Akshat</div>
-          <div style="font-size:10px; color:var(--ink-dim);">Lv. <span id="summaryLevel">5</span> Unawakened</div>
-        </div>
-      </div>
-      <div class="hero-summary-stats-list">
-        <div class="stat-item-row"><span style="color:#ef4444;">❤️ HP</span><span id="summaryHP">120</span></div>
-        <div class="stat-item-row"><span style="color:#f59e0b;">⚔️ ATK</span><span id="summaryATK">18</span></div>
-        <div class="stat-item-row"><span style="color:#3b82f6;">🛡️ DEF</span><span id="summaryDEF">12</span></div>
-        <div class="stat-item-row"><span style="color:#a855f7;">🔮 MAG</span><span id="summaryMAG">8</span></div>
-        <div class="stat-item-row"><span style="color:#10b981;">⚡ SPD</span><span id="summarySPD">10</span></div>
-      </div>
-      <button id="btnStats" class="btn-fantasy" style="margin-top:auto; width:100%; font-size:11px; padding:4px 8px;" onclick="openStats()">🛡️ Character <span id="pointsBadge"></span></button>
-      <span id="statSTR" style="display:none;">5</span>
-      <span id="statVIT" style="display:none;">5</span>
-      <span id="statINT" style="display:none;">5</span>
-      <span id="statAGI" style="display:none;">5</span>
-      <button id="btnTree" style="display:none;" onclick="openSkillTree()"></button>
-      <button id="btnInventory" style="display:none;" onclick="openInventory()"></button>
-    </div>
-
-    <!-- PANEL 3: TABBED MAIN DOCK / GRID INVENTORY -->
-    <div class="tabbed-inventory-card" id="tabbedInventoryPanel">
-      <div class="inv-tabs-row">
-        <div class="inv-subtab-group">
-          <span class="inv-subtab active" onclick="setInvSubtab('Inventory')">Inventory</span>
-          <span class="inv-subtab" onclick="setInvSubtab('Equipment')">Equipment</span>
-          <span class="inv-subtab" onclick="setInvSubtab('Skills')">Skills</span>
-          <span class="inv-subtab" onclick="setInvSubtab('Stats')">Stats</span>
-        </div>
-      </div>
-      <div class="inventory-grid-6x2" id="inventoryGrid6x2">
-        <div class="inv-slot-box" title="Iron Sword">⚔️</div>
-        <div class="inv-slot-box" title="Knight Helmet">🪖</div>
-        <div class="inv-slot-box" title="Steel Gauntlets">🦾</div>
-        <div class="inv-slot-box" title="Leather Bracers">🦺</div>
-        <div class="inv-slot-box" title="Health Potion">🧪<span class="inv-slot-count">5</span></div>
-        <div class="inv-slot-box" title="Mana Potion">🧴<span class="inv-slot-count">3</span></div>
-        <div class="inv-slot-box" title="Ration Bread">🍞<span class="inv-slot-count">8</span></div>
-        <div class="inv-slot-box" title="Teleport Scroll">📜<span class="inv-slot-count">2</span></div>
-        <div class="inv-slot-box" title="Sunbloom Herb">🌿<span class="inv-slot-count">4</span></div>
-        <div class="inv-slot-box" title="Iron Ore">🪨<span class="inv-slot-count">6</span></div>
-        <div class="inv-slot-box" style="opacity:0.35;">🔮</div>
-        <div class="inv-slot-box" style="opacity:0.35;">💎</div>
-      </div>
-      <div class="inv-footer-row">
-        <span>🎒 <span id="invCount">20</span> / 50</span>
-        <div style="display:flex; gap:6px;">
-          <button class="btn-fantasy" style="font-size:10px; padding:2px 8px;" onclick="openInventory()">Sort</button>
-          <button class="btn-fantasy" style="font-size:10px; padding:2px 6px;" onclick="openInventory()">🗑️</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- PANEL 4: ACTION HOTBAR -->
-    <div class="action-hotbar-card" id="actionHotbarPanel">
+    <!-- PANEL 2: ACTION HOTBAR -->
+    <div class="action-hotbar-card" id="actionHotbarPanel" style="display:flex; flex-direction:column; align-items:center; justify-content:center;">
+      <div style="font-family:'Cinzel',serif; font-size:11px; color:var(--gold); margin-bottom:8px; font-weight:700;">⚔️ COMBAT SKILLS</div>
       <div class="hotbar-slots-row">
         <div class="hotbar-slot-box" title="Slash [Q]" onclick="openSkillTree()">
           <span class="hotbar-slot-key">Q</span>
@@ -654,14 +597,35 @@
       </div>
     </div>
 
-    <!-- PANEL 5: ATMOSPHERIC LORE PANEL -->
-    <div class="atmospheric-lore-card" id="loreQuotePanel">
-      <div class="lore-quote-content">
-        "The journey of a thousand miles begins with a single step."
-        <div class="lore-quote-divider"></div>
+    <!-- PANEL 3: QUICK SYSTEM SHORTCUTS -->
+    <div class="game-log-card" style="display:flex; flex-direction:column; justify-content:space-between; padding:12px;">
+      <div style="font-family:'Cinzel',serif; font-size:11px; color:var(--gold); font-weight:700; border-bottom:1px solid rgba(214,174,85,0.2); padding-bottom:6px;">⚡ QUICK ACTIONS</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:8px 0;">
+        <button class="btn-fantasy" style="font-size:11px; padding:6px 4px;" onclick="openInventory()">🎒 Inventory [I]</button>
+        <button id="btnStats" class="btn-fantasy" style="font-size:11px; padding:6px 4px;" onclick="openStats()">🛡️ Hero Stats [C] <span id="pointsBadge"></span></button>
+        <button id="btnTree" class="btn-fantasy" style="font-size:11px; padding:6px 4px;" onclick="openSkillTree()">🌲 Skill Tree [T]</button>
+        <button class="btn-fantasy" style="font-size:11px; padding:6px 4px;" onclick="openAchievements()">🏆 Badges [A]</button>
       </div>
+      <div style="font-size:10.5px; color:var(--ink-dim); text-align:center;">🎒 Items: <span id="invCount">20</span> / 50</div>
     </div>
   </div>
+</div>
+
+<!-- HIDDEN DOM HELPERS FOR HUD UPDATES -->
+<div style="display:none;">
+  <span id="summaryAvatarIcon"></span>
+  <span id="summaryLevel"></span>
+  <span id="summaryHP"></span>
+  <span id="summaryATK"></span>
+  <span id="summaryDEF"></span>
+  <span id="summaryMAG"></span>
+  <span id="summarySPD"></span>
+  <span id="statSTR"></span>
+  <span id="statVIT"></span>
+  <span id="statINT"></span>
+  <span id="statAGI"></span>
+  <button id="btnInventory" onclick="openInventory()"></button>
+  <div id="inventoryGrid6x2"></div>
 </div>
 
 <div class="dpad" id="dpad">
@@ -671,6 +635,10 @@
   <button class="right" data-dir="right">▶</button>
   <button class="action-btn" id="dpadInteractBtn">✋ E</button>
 </div>
+
+<!-- MODAL OVERLAY & TOAST CONTAINERS -->
+<div id="modalRoot"></div>
+<div id="toast" class="toast"></div>
 
 <script>
 /* ================= DATA ================= */
@@ -3758,6 +3726,7 @@ function claimQuest(){
 }
 
 /* ---------- MERCHANT ---------- */
+function openShop(){ openMerchant(); }
 function openMerchant(){
   const p = state.player;
   if(!p.class){
