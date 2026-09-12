@@ -3,167 +3,622 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Awakening — Core Loop Prototype</title>
+<title>Awakening — Dark Fantasy RPG</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Cinzel:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg: #0d0e1a; --panel: #161a2e; --panel-border: #2a2f4a;
-    --ink: #e7e6f0; --ink-dim: #9b9ab3;
-    --violet: #7c5cff; --violet-dim: #4a3a99;
-    --gold: #e8b34d; --danger: #e2555f; --good: #4cd684;
-    --rank-D: #8b8f98; --rank-C: #4cae6d; --rank-B: #4c8fe8; --rank-A: #a64ce8; --rank-S: #e8b34d;
+    --bg-dark: #05060c;
+    --panel-bg: rgba(13, 16, 29, 0.88);
+    --panel-border: rgba(240, 197, 98, 0.28);
+    --panel-glow: rgba(140, 82, 255, 0.15);
+    --ink: #eae8f5;
+    --ink-dim: #9896b3;
+    --gold: #f0c562;
+    --gold-bright: #ffd875;
+    --gold-glow: rgba(240, 197, 98, 0.4);
+    --violet: #8c52ff;
+    --violet-dim: #4a28a3;
+    --cyan: #38ef7d;
+    --danger: #ff4757;
+    --good: #2ed573;
+    --rank-D: #a0a5b5; --rank-C: #2ed573; --rank-B: #4a90e2; --rank-A: #b83bfa; --rank-S: #f0c562;
   }
   *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
+  html,body{margin:0;padding:0;width:100%;height:100%;overflow-x:hidden;}
   body{
-    background: radial-gradient(ellipse at top, #14172b 0%, #08091a 65%);
+    background: #05060c radial-gradient(circle at 50% 20%, #15182e 0%, #05060c 80%);
     color: var(--ink); font-family: 'Inter', sans-serif; min-height:100vh;
-    display:flex; flex-direction:column; align-items:center; padding: 20px 12px 40px;
-    -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding: 12px 10px 24px; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
   }
-  h1,h2,h3{ font-family:'Cinzel', serif; font-weight:600; margin:0; }
-  .title{ font-size: 28px; letter-spacing: 0.5px; margin-bottom: 4px; }
-  .subtitle{ color: var(--ink-dim); font-size: 13px; margin-bottom: 22px; text-align:center; }
-  .layout{ display:flex; gap:18px; max-width: 920px; width:100%; }
-  .stage-wrap{ display:flex; flex-direction:column; gap: 14px; flex: 1; min-width:0; }
-  .dpad{
-    display:none; align-self:center; grid-template-columns: 56px 56px 56px; grid-template-rows: 56px 56px 56px;
-    gap:6px; margin-top: 4px; user-select:none;
+  
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: rgba(5,6,12,0.8); }
+  ::-webkit-scrollbar-thumb { background: rgba(140,82,255,0.4); border-radius: 4px; border: 1px solid var(--panel-border); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+
+  h1,h2,h3,h4{ font-family:'Cinzel', serif; font-weight:700; margin:0; letter-spacing: 0.5px; }
+
+  /* GAME CONTAINER */
+  .game-container {
+    width: 100%; max-width: 1160px; display: flex; flex-direction: column; gap: 12px;
+    background: rgba(8, 10, 20, 0.75); border: 1px solid var(--panel-border);
+    box-shadow: 0 16px 48px rgba(0,0,0,0.8), 0 0 30px var(--panel-glow);
+    border-radius: 14px; padding: 14px; backdrop-filter: blur(16px);
   }
-  .dpad button{ width:56px; height:56px; font-size:20px; display:flex; align-items:center; justify-content:center; padding:0; margin:0; }
-  .dpad .up{ grid-column:2; grid-row:1; } .dpad .left{ grid-column:1; grid-row:2; }
-  .dpad .down{ grid-column:2; grid-row:2; } .dpad .right{ grid-column:3; grid-row:2; }
-  @media (max-width: 760px){
-    .layout{ flex-direction:column; align-items:center; }
-    .hud{ width:100%; max-width: 420px; }
-    #gameCanvas{ max-width: 100%; }
-    .hint{ display:none; }
-    .dpad{ display:grid; }
+
+  /* TOP CINEMATIC HUD */
+  .top-hud {
+    display: grid; grid-template-columns: 280px 1fr auto; align-items: center; gap: 16px;
+    background: rgba(10, 14, 26, 0.96); border: 1px solid var(--panel-border);
+    border-radius: 12px; padding: 8px 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.08);
   }
-  #gameCanvas{ background:#10132a; border:1px solid var(--panel-border); border-radius:10px; display:block; width:100%; height:auto; }
-  .hint{ font-size: 12px; color: var(--ink-dim); text-align:center; }
-  .hud{
-    width: 240px; background: var(--panel); border: 1px solid var(--panel-border);
-    border-radius: 10px; padding: 16px; display:flex; flex-direction:column; gap: 12px; height: fit-content;
+
+  .hud-hero-summary { display: flex; align-items: center; gap: 12px; }
+  .portrait-frame {
+    width: 44px; height: 44px; border-radius: 10px; border: 2px solid var(--gold);
+    background: radial-gradient(circle, #2a1f47 0%, #101224 100%);
+    display: flex; align-items: center; justify-content: center; position: relative;
+    box-shadow: 0 0 10px var(--gold-glow); flex-shrink: 0;
   }
-  .hud-row{ display:flex; justify-content:space-between; font-size:13px; }
-  .hud-label{ color: var(--ink-dim); }
-  .rank-pill{ display:inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; font-family:'Cinzel',serif; }
-  .bar-track{ width:100%; height: 8px; background: #0b0d1a; border-radius: 999px; overflow:hidden; border: 1px solid var(--panel-border); }
-  .bar-fill{ height:100%; border-radius:999px; transition: width .3s ease; }
-  .hp-fill{ background: linear-gradient(90deg, #e2555f, #ff8a8a); }
-  .xp-fill{ background: linear-gradient(90deg, var(--violet), #a48bff); }
-  .focus-fill{ background: linear-gradient(90deg, #4c8fe8, #8ec0ff); }
-  .hud-buttons{ display:flex; flex-direction:column; gap:8px; margin-top:4px; }
-  button{
-    font-family:'Inter',sans-serif; font-weight:600; font-size: 13px; border-radius: 7px;
-    border: 1px solid var(--panel-border); background: #1c2140; color: var(--ink);
-    padding: 9px 12px; cursor:pointer; transition: background .15s ease, border-color .15s ease, transform .1s ease;
+  .portrait-avatar { font-size: 22px; }
+  .level-badge {
+    position: absolute; bottom: -5px; right: -5px; background: var(--gold); color: #000;
+    font-size: 9px; font-weight: 800; font-family: 'Cinzel', serif;
+    padding: 1px 4px; border-radius: 999px; border: 1px solid #000;
   }
-  button:hover{ background:#262c52; border-color: var(--violet-dim); }
-  button:active{ transform: scale(0.98); }
-  button.primary{ background: var(--violet); border-color: var(--violet); color:#fff; }
-  button.primary:hover{ background:#6b4de8; }
-  button.danger{ background: transparent; border-color: var(--danger); color: var(--danger); }
-  button.danger:hover{ background: rgba(226,85,95,0.12); }
-  button:disabled{ opacity:.4; cursor:not-allowed; }
-  button:disabled:hover{ background:#1c2140; }
-  .overlay{ position:fixed; inset:0; background: rgba(6,7,15,0.72); display:flex; align-items:center; justify-content:center; z-index: 50; padding: 20px; }
-  .modal{
-    background: var(--panel); border: 1px solid var(--panel-border); border-radius: 12px;
-    padding: 24px; max-width: 480px; width:100%; max-height: 84vh; overflow-y:auto; position:relative;
+
+  .hero-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .hero-class-row { display: flex; align-items: center; gap: 6px; }
+  .hero-class-name { font-family: 'Cinzel', serif; font-weight: 700; font-size: 13px; color: #fff; }
+  .rank-pill-fantasy {
+    padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 800;
+    font-family: 'Cinzel', serif; letter-spacing: 0.5px; text-transform: uppercase;
   }
-  .modal h2{ font-size:19px; margin-bottom:6px; }
-  .modal p.desc{ color: var(--ink-dim); font-size: 13px; margin: 6px 0 18px; line-height:1.5; }
-  .choice-row{ display:flex; gap:10px; margin-bottom: 10px; flex-wrap:wrap; }
-  .choice-card{ flex:1; min-width: 100px; border:1px solid var(--panel-border); border-radius: 9px; padding: 14px 10px; text-align:center; cursor:pointer; background:#1c2140; }
-  .choice-card:hover{ border-color: var(--violet); }
-  .choice-card .icon{ font-size: 26px; margin-bottom:6px; }
-  .choice-card .name{ font-family:'Cinzel',serif; font-size:14px; }
-  .choice-card .flavor{ font-size:11px; color:var(--ink-dim); margin-top:4px; }
-  .modal-actions{ display:flex; gap:10px; justify-content:flex-end; margin-top: 18px; flex-wrap:wrap; }
-  .close-x{ position:absolute; top:14px; right:16px; background:none; border:none; color:var(--ink-dim); font-size:18px; padding:2px 6px; }
-  .log-box{
-    background:#0b0d1a; border: 1px solid var(--panel-border); border-radius: 8px; padding: 10px 12px;
-    font-size: 12.5px; color: var(--ink-dim); max-height: 110px; overflow-y:auto; margin: 12px 0; line-height:1.6;
+  .spec-pill { font-size: 9px; color: var(--gold); background: rgba(240,197,98,0.15); border: 1px solid var(--gold); padding: 1px 5px; border-radius: 4px; }
+
+  .hero-bars { display: flex; flex-direction: column; gap: 3px; }
+  .hud-stat-bar { display: flex; align-items: center; gap: 6px; font-size: 10.5px; }
+  .bar-label { font-weight: 700; min-width: 18px; font-size: 10px; }
+  .bar-track-fancy {
+    width: 100px; height: 6px; background: #060814; border-radius: 999px; overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.12); position: relative;
   }
-  .log-box .level-line{ color: var(--gold); font-weight:600; }
-  .combatants{ display:flex; gap:16px; margin-bottom: 6px; }
-  .combatant{ flex:1; }
-  .combatant .name{ font-size:13px; font-weight:600; margin-bottom:4px; display:flex; justify-content:space-between; }
-  .combatant .hp-text{ font-size: 11px; color: var(--ink-dim); }
-  .focus-row{ display:flex; justify-content:space-between; font-size:11px; color:var(--ink-dim); margin: 8px 0 2px; }
-  .stat-row{ display:flex; align-items:center; justify-content:space-between; padding:6px 0; border-bottom: 1px solid #23273f; font-size:13px; }
-  .stat-row:last-child{ border-bottom:none; }
-  .stepper{ display:flex; align-items:center; gap:10px; }
-  .stepper button{ width:26px; height:26px; padding:0; display:flex; align-items:center; justify-content:center; }
-  .item-row{ display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #23273f; font-size:13px; gap:10px; }
-  .item-row:last-child{ border-bottom:none; }
-  .empty-note{ color:var(--ink-dim); font-size:13px; text-align:center; padding: 14px 0; }
-  .toast{
-    position:fixed; bottom: 26px; left:50%; transform:translateX(-50%);
-    background: #1c2140; border:1px solid var(--violet-dim); padding: 10px 18px; border-radius: 8px;
-    font-size: 13px; z-index: 60; opacity:0; pointer-events:none; transition: opacity .25s ease, transform .25s ease;
+  .bar-fill-fancy { height: 100%; border-radius: 999px; transition: width 0.3s ease; }
+  .hp-fill-fancy { background: linear-gradient(90deg, #ef4444, #f87171); box-shadow: 0 0 6px rgba(239,68,68,0.6); }
+  .mp-fill-fancy { background: linear-gradient(90deg, #3b82f6, #60a5fa); box-shadow: 0 0 6px rgba(59,130,246,0.6); }
+  .xp-fill-fancy { background: linear-gradient(90deg, #8c52ff, #70a1ff); box-shadow: 0 0 6px rgba(140,82,255,0.6); }
+  .bar-value { font-size: 10px; font-weight: 600; color: #fff; min-width: 50px; }
+
+  /* TOP CENTER NAV DOCK */
+  .top-nav-dock { display: flex; justify-content: center; align-items: center; gap: 4px; flex-wrap: wrap; }
+  .nav-tab {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 5px 12px; border-radius: 8px; background: transparent; border: 1px solid transparent;
+    color: var(--ink-dim); font-family: 'Cinzel', serif; font-size: 11px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s ease;
   }
-  .toast.show{ opacity:1; transform: translateX(-50%) translateY(-6px); }
-  .skill-tag{ display:inline-block; font-size:11px; padding:2px 8px; border-radius:6px; background:#23274a; color: var(--violet); margin: 2px 4px 2px 0; border:1px solid var(--violet-dim); }
-  .dungeon-card{
-    border:1px solid var(--panel-border); border-radius: 9px; padding: 12px 14px; margin-bottom:8px;
-    display:flex; justify-content:space-between; align-items:center; gap:10px; background:#1c2140;
+  .nav-tab:hover { color: #fff; background: rgba(255, 255, 255, 0.05); border-color: rgba(214, 174, 85, 0.2); }
+  .nav-tab.active {
+    color: var(--gold-bright); background: linear-gradient(180deg, rgba(214, 174, 85, 0.25) 0%, rgba(214, 174, 85, 0.04) 100%);
+    border: 1px solid var(--gold); box-shadow: 0 0 12px rgba(214, 174, 85, 0.2);
   }
-  .dungeon-card.locked{ opacity:.45; }
-  .dungeon-card .info .name{ font-family:'Cinzel',serif; font-size:14px; }
-  .dungeon-card .info .meta{ font-size:11px; color:var(--ink-dim); margin-top:2px; }
-  .quest-box{ background:#0b0d1a; border:1px solid var(--panel-border); border-radius:8px; padding:12px 14px; margin: 10px 0 4px; }
-  .quest-box .qtitle{ font-size:12px; color:var(--ink-dim); margin-bottom:4px; }
-  .branch-title{ font-family:'Cinzel',serif; font-size:14px; margin: 14px 0 4px; color: var(--gold); }
+  .nav-tab .nav-icon { font-size: 15px; margin-bottom: 2px; }
+
+  /* TOP RIGHT ACTIONS & RESOURCES */
+  .hud-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .res-pill {
+    display: flex; align-items: center; gap: 4px; background: rgba(4, 6, 14, 0.8);
+    border: 1px solid rgba(214, 174, 85, 0.25); border-radius: 6px; padding: 4px 8px;
+    font-size: 11.5px; font-weight: 700; color: #fff;
+  }
+  .res-pill .plus-btn {
+    background: rgba(214, 174, 85, 0.2); border: none; color: var(--gold); width: 15px; height: 15px;
+    border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer;
+  }
+  .icon-btn {
+    background: rgba(18, 24, 46, 0.8); border: 1px solid rgba(255, 255, 255, 0.15);
+    color: var(--ink-dim); width: 30px; height: 30px; border-radius: 7px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; font-size: 13px;
+  }
+  .icon-btn:hover { border-color: var(--gold); color: #fff; background: rgba(30, 40, 75, 0.9); }
+
+  /* MAIN STAGE LAYOUT */
+  .main-stage-container { display: flex; gap: 14px; position: relative; width: 100%; }
+  .canvas-world-column { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .right-overlay-column { width: 210px; display: flex; flex-direction: column; gap: 12px; flex-shrink: 0; }
+
+  /* CANVAS WRAPPER */
+  .canvas-wrap {
+    flex: 1; min-width: 0; position: relative; border-radius: 12px; overflow: hidden;
+    border: 1px solid var(--panel-border); box-shadow: 0 0 24px rgba(0,0,0,0.6); background: #080a16;
+  }
+  #gameCanvas { display: block; width: 100%; height: auto; background: #0b0d1e; }
+
+  /* INTERACTION PROMPT BAR */
+  .location-prompt-bar {
+    width: 100%; background: rgba(14, 18, 34, 0.95); border-top: 1px solid var(--panel-border);
+    padding: 8px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08); z-index: 10;
+  }
+  .prompt-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .prompt-icon { font-size: 22px; flex-shrink: 0; }
+  .prompt-text { display: flex; flex-direction: column; min-width: 0; }
+  .prompt-title { font-family: 'Cinzel', serif; font-weight: 700; font-size: 13px; color: var(--gold-bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .prompt-desc { font-size: 11px; color: var(--ink-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* CIRCULAR MINIMAP WIDGET */
+  .minimap-card {
+    background: var(--panel-bg); border: 1.5px solid var(--panel-border);
+    border-radius: 14px; padding: 12px; display: flex; flex-direction: column; align-items: center;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6); position: relative;
+  }
+  .minimap-ring {
+    width: 124px; height: 124px; border-radius: 50%; border: 2px solid var(--gold);
+    position: relative; overflow: hidden; box-shadow: 0 0 16px rgba(0,0,0,0.8), inset 0 0 10px rgba(0,0,0,0.8);
+    background: #090d1a;
+  }
+  #minimapCanvas { width: 120px; height: 120px; border-radius: 50%; display: block; }
+  .compass-label { position: absolute; font-family: 'Cinzel', serif; font-size: 9px; font-weight: 800; color: var(--gold); pointer-events: none; z-index: 5; }
+  .compass-n { top: 2px; left: 50%; transform: translateX(-50%); }
+  .compass-e { right: 4px; top: 50%; transform: translateY(-50%); }
+  .compass-s { bottom: 2px; left: 50%; transform: translateX(-50%); }
+  .compass-w { left: 4px; top: 50%; transform: translateY(-50%); }
+  .sun-moon-badge {
+    position: absolute; bottom: 8px; right: 12px; background: rgba(10, 14, 26, 0.9);
+    border: 1px solid var(--gold); border-radius: 50%; width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center; font-size: 11px;
+  }
+
+  /* ACTIVE QUEST TRACKER CARD */
+  .active-quest-card {
+    background: var(--panel-bg); border: 1px solid var(--panel-border);
+    border-radius: 12px; padding: 12px 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+  }
+  .quest-tracker-title-row {
+    display: flex; align-items: center; justify-content: space-between;
+    font-family: 'Cinzel', serif; font-size: 11px; font-weight: 700; color: var(--gold);
+    border-bottom: 1px solid rgba(214, 174, 85, 0.2); padding-bottom: 6px; margin-bottom: 8px;
+  }
+  .quest-tracker-name { font-family: 'Cinzel', serif; font-size: 12.5px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+  .quest-tracker-obj { font-size: 11px; color: var(--ink-dim); line-height: 1.4; margin-bottom: 4px; }
+  .quest-tracker-reward { font-size: 10.5px; color: var(--cyan); font-weight: 600; }
+
+  /* BOTTOM HUD ROW (5 PANELS) */
+  .bottom-hud-row {
+    display: grid; grid-template-columns: 240px 180px 1fr 210px 190px; gap: 12px; width: 100%;
+  }
+
+  /* PANEL 1: GAME CHAT / LOG */
+  .game-log-card {
+    background: var(--panel-bg); border: 1px solid var(--panel-border);
+    border-radius: 12px; padding: 10px; display: flex; flex-direction: column; height: 165px;
+  }
+  .chat-tabs { display: flex; gap: 6px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px; margin-bottom: 6px; }
+  .chat-tab { font-size: 10.5px; font-weight: 600; color: var(--ink-dim); cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+  .chat-tab.active { color: var(--gold-bright); background: rgba(214, 174, 85, 0.15); font-weight: 700; }
+  .log-messages-body { flex: 1; overflow-y: auto; font-size: 11px; display: flex; flex-direction: column; gap: 4px; }
+  .log-msg-item { color: var(--ink); line-height: 1.35; word-break: break-word; }
+
+  /* PANEL 2: HERO SUMMARY CARD */
+  .hero-summary-card {
+    background: var(--panel-bg); border: 1px solid var(--panel-border);
+    border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 6px; height: 165px;
+  }
+  .hero-summary-top { display: flex; align-items: center; gap: 8px; }
+  .hero-portrait-mini {
+    width: 38px; height: 38px; border-radius: 8px; border: 1.5px solid var(--gold);
+    background: radial-gradient(circle, #201938 0%, #0c0d1c 100%);
+    display: flex; align-items: center; justify-content: center; font-size: 20px;
+    box-shadow: 0 0 8px rgba(214, 174, 85, 0.3); flex-shrink: 0;
+  }
+  .hero-summary-stats-list { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 6px; font-size: 10.5px; }
+  .stat-item-row {
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(5, 7, 16, 0.6); padding: 2px 5px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05);
+  }
+
+  /* PANEL 3: TABBED INVENTORY GRID PANEL */
+  .tabbed-inventory-card {
+    background: var(--panel-bg); border: 1px solid var(--panel-border);
+    border-radius: 12px; padding: 10px; display: flex; flex-direction: column; height: 165px;
+  }
+  .inv-tabs-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 4px; margin-bottom: 6px; }
+  .inv-subtab-group { display: flex; gap: 8px; }
+  .inv-subtab {
+    font-family: 'Cinzel', serif; font-size: 10.5px; font-weight: 600; color: var(--ink-dim);
+    cursor: pointer; padding: 2px 6px; border-radius: 4px; transition: all 0.2s;
+  }
+  .inv-subtab.active { color: var(--gold-bright); background: rgba(214, 174, 85, 0.15); font-weight: 700; }
+  .inventory-grid-6x2 { display: grid; grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(2, 1fr); gap: 5px; flex: 1; }
+  .inv-slot-box {
+    background: rgba(5, 7, 16, 0.8); border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    position: relative; font-size: 18px; cursor: pointer; transition: all 0.2s;
+  }
+  .inv-slot-box:hover { border-color: var(--gold); background: rgba(255, 255, 255, 0.05); }
+  .inv-slot-count {
+    position: absolute; bottom: 1px; right: 3px; font-size: 8.5px; font-weight: 800;
+    color: #fff; background: rgba(0,0,0,0.8); padding: 0 3px; border-radius: 3px;
+  }
+  .inv-footer-row { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; font-size: 10.5px; color: var(--ink-dim); }
+
+  /* PANEL 4: ACTION HOTBAR PANEL */
+  .action-hotbar-card {
+    background: var(--panel-bg); border: 1px solid var(--panel-border);
+    border-radius: 12px; padding: 8px; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; height: 165px;
+  }
+  .hotbar-slots-row { display: flex; gap: 5px; align-items: center; }
+  .hotbar-slot-box {
+    width: 36px; height: 44px; background: rgba(5, 7, 16, 0.9);
+    border: 1.5px solid rgba(255, 255, 255, 0.15); border-radius: 7px;
+    display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+    padding: 3px 2px; position: relative; cursor: pointer; transition: all 0.2s;
+  }
+  .hotbar-slot-box:hover { border-color: var(--gold); box-shadow: 0 0 8px var(--gold-glow); }
+  .hotbar-slot-box.ultimate-slot { width: 44px; height: 48px; border-color: var(--gold); background: radial-gradient(circle, #2a184a 0%, #0d081a 100%); }
+  .hotbar-slot-key { font-family: 'Cinzel', serif; font-size: 8.5px; font-weight: 800; color: var(--gold-bright); }
+  .hotbar-slot-icon { font-size: 17px; }
+
+  /* PANEL 5: ATMOSPHERIC LORE PANEL */
+  .atmospheric-lore-card {
+    background: linear-gradient(180deg, rgba(14, 18, 36, 0.96) 0%, rgba(6, 8, 18, 0.98) 100%);
+    border: 1px solid var(--panel-border); border-radius: 12px; padding: 12px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; height: 165px; position: relative; overflow: hidden;
+  }
+  .lore-quote-content {
+    font-family: 'Cinzel', serif; font-size: 11.5px; font-style: italic; color: var(--gold-bright);
+    line-height: 1.5; text-shadow: 0 2px 8px rgba(0,0,0,0.9);
+  }
+  .lore-quote-divider { width: 30px; height: 1px; background: var(--gold); margin: 8px auto 0; box-shadow: 0 0 6px var(--gold-glow); }
+
+  /* FANTASY BUTTONS */
+  .btn-fantasy {
+    font-family: 'Inter', sans-serif; font-weight: 700; font-size: 12px; border-radius: 7px;
+    border: 1px solid rgba(240, 197, 98, 0.35); background: linear-gradient(180deg, #1c2242 0%, #101428 100%);
+    color: var(--ink); padding: 7px 12px; cursor: pointer; display: inline-flex; align-items: center;
+    justify-content: center; gap: 5px; transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1);
+  }
+  .btn-fantasy:hover {
+    border-color: var(--gold); background: linear-gradient(180deg, #2a3363 0%, #181f3d 100%);
+    color: #fff; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 10px var(--gold-glow);
+  }
+  .btn-fantasy:active { transform: translateY(1px); }
+  .btn-fantasy.primary-glow, button.primary {
+    background: linear-gradient(180deg, #8c52ff 0%, #5d22c9 100%); border-color: #a673ff; color: #fff;
+    box-shadow: 0 0 14px rgba(140,82,255,0.4);
+  }
+  .btn-fantasy.primary-glow:hover, button.primary:hover {
+    background: linear-gradient(180deg, #9d6bff 0%, #6e33de 100%); border-color: var(--gold);
+    box-shadow: 0 0 20px rgba(140,82,255,0.7);
+  }
+  button.danger { background: linear-gradient(180deg, #5c1822 0%, #350b12 100%); border-color: var(--danger); color: #ff8a8a; }
+  button.danger:hover { background: linear-gradient(180deg, #7a222e 0%, #4a111a 100%); color: #fff; box-shadow: 0 0 12px rgba(255,71,87,0.5); }
+  button:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+
+  /* MODALS & OVERLAYS */
+  .overlay { position: fixed; inset: 0; background: rgba(3, 4, 10, 0.82); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 16px; backdrop-filter: blur(8px); }
+  .modal {
+    background: linear-gradient(180deg, #12162b 0%, #0a0c18 100%);
+    border: 1.5px solid var(--gold); border-radius: 14px; padding: 24px; max-width: 520px; width: 100%;
+    max-height: 86vh; overflow-y: auto; position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.9), 0 0 30px var(--gold-glow);
+    animation: modalFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes modalFadeIn {
+    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .modal h2 { font-size: 20px; color: var(--gold-bright); margin-bottom: 6px; border-bottom: 1px solid rgba(240,197,98,0.25); padding-bottom: 8px; }
+  .modal p.desc { color: var(--ink-dim); font-size: 13px; margin: 8px 0 16px; line-height: 1.5; }
+  .choice-row { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  .choice-card {
+    flex: 1; min-width: 110px; border: 1px solid rgba(255,255,255,0.14); border-radius: 99px;
+    padding: 14px 10px; text-align: center; cursor: pointer; background: rgba(22, 28, 54, 0.7);
+    transition: all 0.2s ease;
+  }
+  .choice-card:hover { border-color: var(--gold); background: rgba(40, 50, 95, 0.8); transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.4), 0 0 12px var(--gold-glow); }
+  .choice-card .icon { font-size: 28px; margin-bottom: 6px; }
+  .choice-card .name { font-family: 'Cinzel', serif; font-size: 14px; font-weight: 700; color: #fff; }
+  .choice-card .flavor { font-size: 11px; color: var(--ink-dim); margin-top: 4px; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; flex-wrap: wrap; }
+  .close-x { position: absolute; top: 14px; right: 16px; background: none; border: none; color: var(--ink-dim); font-size: 20px; cursor: pointer; padding: 2px 6px; transition: color 0.2s; }
+  .close-x:hover { color: var(--danger); }
+  .log-box {
+    background: #05060f; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px;
+    font-size: 12.5px; color: var(--ink-dim); max-height: 120px; overflow-y: auto; margin: 12px 0; line-height: 1.6;
+  }
+  .log-box .level-line { color: var(--gold); font-weight: 700; }
+  .item-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 13px; gap: 10px; }
+  .item-row:last-child { border-bottom: none; }
+  .empty-note { color: var(--ink-dim); font-size: 13px; text-align: center; padding: 16px 0; }
+  .toast {
+    position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%);
+    background: rgba(16, 20, 38, 0.95); border: 1.5px solid var(--gold); padding: 11px 22px;
+    border-radius: 8px; font-size: 13.5px; font-weight: 700; z-index: 200; opacity: 0;
+    pointer-events: none; transition: all 0.25s ease; box-shadow: 0 8px 30px rgba(0,0,0,0.8), 0 0 16px var(--gold-glow);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(-8px); }
+  .dungeon-card {
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 9px; padding: 12px 14px; margin-bottom: 8px;
+    display: flex; justify-content: space-between; align-items: center; gap: 10px; background: rgba(22, 28, 54, 0.7);
+    transition: all 0.2s;
+  }
+  .dungeon-card:hover { border-color: var(--violet); background: rgba(35, 45, 85, 0.8); }
+  .dungeon-card.locked { opacity: 0.45; }
+  .dungeon-card .info .name { font-family: 'Cinzel', serif; font-size: 14px; font-weight: 700; color: #fff; }
+  .dungeon-card .info .meta { font-size: 11px; color: var(--ink-dim); margin-top: 2px; }
+  .branch-title { font-family: 'Cinzel', serif; font-size: 14px; margin: 16px 0 6px; color: var(--gold); border-bottom: 1px solid rgba(240,197,98,0.2); padding-bottom: 4px; }
+  
+  /* DPAD MOBILE */
+  .dpad { display: none; align-self: center; grid-template-columns: 56px 56px 56px; grid-template-rows: 56px 56px 56px; gap: 6px; margin-top: 8px; user-select: none; }
+  .dpad button { width: 56px; height: 56px; font-size: 20px; display: flex; align-items: center; justify-content: center; padding: 0; margin: 0; background: #161c36; border: 1px solid var(--panel-border); border-radius: 8px; color: #fff; }
+  .dpad .up { grid-column: 2; grid-row: 1; } .dpad .left { grid-column: 1; grid-row: 2; }
+  .dpad .down { grid-column: 2; grid-row: 2; } .dpad .right { grid-column: 3; grid-row: 2; }
+
+  /* RESPONSIVE MOBILE & TABLET LAYOUT */
+  @media (max-width: 1024px) {
+    .game-container { padding: 10px; gap: 10px; width: 100%; max-width: 100%; }
+    .top-hud { display: flex; flex-direction: column; gap: 10px; padding: 10px; align-items: center; width: 100%; }
+    .hud-hero-summary { width: 100%; justify-content: space-between; }
+    .top-nav-dock { width: 100%; overflow-x: auto; flex-wrap: nowrap; justify-content: flex-start; padding-bottom: 4px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    .nav-tab { flex-shrink: 0; padding: 6px 12px; }
+    .hud-actions { width: 100%; justify-content: space-between; }
+    .main-stage-container { flex-direction: column; width: 100%; }
+    .right-overlay-column { width: 100%; flex-direction: row; gap: 10px; }
+    .minimap-card, .active-quest-card { flex: 1; min-width: 0; }
+    .bottom-hud-row { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .dpad { display: grid; }
+  }
+
+  @media (max-width: 720px) {
+    .game-container { padding: 6px; gap: 8px; border-radius: 8px; }
+    .bottom-hud-row { grid-template-columns: 1fr; gap: 8px; }
+    .game-log-card, .hero-summary-card, .tabbed-inventory-card, .action-hotbar-card, .atmospheric-lore-card { height: auto; min-height: 140px; }
+    .inventory-grid-6x2 { grid-template-columns: repeat(6, 1fr); gap: 4px; }
+    .inv-slot-box { font-size: 16px; }
+    .right-overlay-column { flex-direction: column; }
+    .minimap-card { width: 100%; }
+  }
 </style>
 </head>
 <body>
 
-<div class="title">Awakening</div>
-<div class="subtitle">City → Sanctuary → Guild → Dungeon — core loop prototype<br><span style="opacity:.7;">Progress saves automatically to this browser.</span></div>
+<div class="game-container">
+  <!-- TOP CINEMATIC HUD HEADER -->
+  <header class="top-hud">
+    <!-- TOP LEFT: HERO PROFILE SUMMARY -->
+    <div class="hud-hero-summary">
+      <div class="portrait-frame">
+        <div class="portrait-avatar" id="hudAvatarIcon">⚔️</div>
+        <div class="level-badge" id="hudLevel">5</div>
+      </div>
+      <div class="hero-info">
+        <div class="hero-class-row">
+          <span class="hero-name" style="font-family:'Cinzel',serif; font-weight:700; font-size:14px; color:#fff;">Akshat</span>
+          <span class="hero-class-name" id="hudClass" style="font-size:11px; color:var(--ink-dim);">Unawakened</span>
+          <span id="hudRank" class="rank-pill-fantasy" style="display:none;"></span>
+          <span class="spec-pill" id="hudSpec" style="display:none;"></span>
+        </div>
+        <div class="hero-bars">
+          <div class="hud-stat-bar">
+            <span class="bar-label" style="color:#ef4444;">HP</span>
+            <div class="bar-track-fancy"><div class="bar-fill-fancy hp-fill-fancy" id="hpBar" style="width:100%"></div></div>
+            <span class="bar-value" id="hpText">120 / 120</span>
+          </div>
+          <div class="hud-stat-bar">
+            <span class="bar-label" style="color:#3b82f6;">MP</span>
+            <div class="bar-track-fancy"><div class="bar-fill-fancy mp-fill-fancy" id="mpBar" style="width:100%;"></div></div>
+            <span class="bar-value" id="mpText">60 / 60</span>
+          </div>
+          <div class="hud-stat-bar" style="display:none;">
+            <span class="bar-label">XP</span>
+            <div class="bar-track-fancy"><div class="bar-fill-fancy xp-fill-fancy" id="xpBar" style="width:0%"></div></div>
+            <span class="bar-value" id="xpText">0 / 20</span>
+          </div>
+        </div>
+      </div>
+    </div>
 
-<div class="layout">
-  <div class="stage-wrap">
-    <canvas id="gameCanvas" width="640" height="420"></canvas>
-    <div class="hint">Move with WASD / Arrow keys. Stand near a building and press <b>E / Space / Enter</b> or click the prompt to enter.</div>
-    <button id="btnPrompt" class="primary" style="display:none; margin-top:8px; width:100%;">Enter Building</button>
-    <div class="dpad" id="dpad">
-      <button class="up" data-dir="up">▲</button>
-      <button class="left" data-dir="left">◀</button>
-      <button class="down" data-dir="down">▼</button>
-      <button class="right" data-dir="right">▶</button>
+    <!-- TOP CENTER: MAIN NAVIGATION DOCK -->
+    <nav class="top-nav-dock">
+      <button class="nav-tab" onclick="openSanctuary()"><span class="nav-icon">🏛️</span>Sanctuary</button>
+      <button class="nav-tab active" onclick="openGuild()"><span class="nav-icon">🏰</span>Guild Hall</button>
+      <button class="nav-tab" onclick="openShop()"><span class="nav-icon">🏪</span>Merchant</button>
+      <button class="nav-tab" onclick="openForge()"><span class="nav-icon">⚒️</span>Forge</button>
+      <button class="nav-tab" onclick="openArena()"><span class="nav-icon">🏟️</span>Arena</button>
+      <button class="nav-tab" onclick="openDungeonGate()"><span class="nav-icon">⛩️</span>Dungeon Gate</button>
+    </nav>
+
+    <!-- TOP RIGHT: RESOURCES & SYSTEM ACTIONS -->
+    <div class="hud-actions">
+      <div class="res-pill" title="Gold Coins">🪙 <span id="hudGold">2,450</span> <button class="plus-btn" onclick="openShop()">+</button></div>
+      <div class="res-pill" title="Shadow Essence">💎 <span id="hudEssence">120</span> <button class="plus-btn" onclick="openShop()">+</button></div>
+      <button id="btnSound" class="icon-btn" title="Toggle Audio">🔊</button>
+      <button class="icon-btn" title="Settings" onclick="openSettings()">⚙️</button>
+      <button class="icon-btn" title="Save Game" onclick="saveGame()">💾</button>
+      <span id="hudOre" style="display:none;">0</span>
+      <span id="hudCores" style="display:none;">0</span>
+      <span id="hudLocationBadge" style="display:none;">Sunlit</span>
+    </div>
+  </header>
+
+  <!-- MAIN GAME STAGE CONTAINER -->
+  <div class="main-stage-container">
+    <!-- LEFT / CENTER COLUMN: CANVAS MAP & DOCKED PROMPT BAR -->
+    <div class="canvas-world-column">
+      <div class="canvas-wrap">
+        <canvas id="gameCanvas" width="640" height="420"></canvas>
+        <div id="locationPrompt" class="location-prompt-bar" style="display:none;">
+          <div class="prompt-left">
+            <div class="prompt-icon" id="promptIcon">🏰</div>
+            <div class="prompt-text">
+              <div class="prompt-title" id="promptTitle">Sanctuary</div>
+              <div class="prompt-desc" id="promptDesc">Awaken class power and transcribe spells.</div>
+            </div>
+          </div>
+          <button id="btnPrompt" class="btn-fantasy primary-glow" style="flex-shrink:0;">ENTER [E / TAP]</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT FLOATING COLUMN: CIRCULAR MINIMAP & ACTIVE QUEST TRACKER -->
+    <div class="right-overlay-column">
+      <!-- CIRCULAR MINIMAP WIDGET -->
+      <div class="minimap-card">
+        <div class="minimap-ring">
+          <canvas id="minimapCanvas" width="120" height="120"></canvas>
+          <span class="compass-label compass-n">N</span>
+          <span class="compass-label compass-e">E</span>
+          <span class="compass-label compass-s">S</span>
+          <span class="compass-label compass-w">W</span>
+        </div>
+        <div class="sun-moon-badge" id="hudWeatherBadge" title="World Time">☀️</div>
+      </div>
+
+      <!-- ACTIVE QUEST TRACKER CARD -->
+      <div class="active-quest-card" id="questTrackerWidget">
+        <div class="quest-tracker-title-row">
+          <span>📜 ACTIVE QUEST</span>
+          <span style="font-size:12px;">🔖</span>
+        </div>
+        <div class="quest-tracker-name" id="questTitle">A New Beginning</div>
+        <div class="quest-tracker-obj" id="questDesc">Talk to the Guild Master (0/1)</div>
+        <div class="quest-tracker-reward" id="questReward">Reward: +120 Gold · +200 XP</div>
+        <div style="font-size:10px; color:var(--cyan); margin-top:4px;" id="questProgress">Objective active</div>
+      </div>
     </div>
   </div>
 
-  <div class="hud">
-    <div>
-      <h3 id="hudClass">Unawakened</h3>
-      <span id="hudRank" class="rank-pill" style="display:none;"></span>
+  <!-- BOTTOM HUD ROW (5 PANELS ACROSS THE BOTTOM) -->
+  <div class="bottom-hud-row">
+    <!-- PANEL 1: GAME CHAT / SYSTEM LOG -->
+    <div class="game-log-card" id="gameLogPanel">
+      <div class="chat-tabs">
+        <span class="chat-tab active" onclick="setChatTab('All')">All</span>
+        <span class="chat-tab" onclick="setChatTab('System')">System</span>
+        <span class="chat-tab" onclick="setChatTab('Guild')">Guild</span>
+        <span class="chat-tab" onclick="setChatTab('Party')">Party</span>
+      </div>
+      <div class="log-messages-body" id="logMessagesBody">
+        <div class="log-msg-item" style="color:var(--gold);">🪙 You received 120 Gold</div>
+        <div class="log-msg-item" style="color:var(--gold-bright);">✨ You gained 200 XP</div>
+        <div class="log-msg-item" style="color:#38ef7d;">🎒 You picked up [Health Potion] x1</div>
+        <div class="log-msg-item" style="color:var(--gold);">📜 Quest updated: A New Beginning</div>
+      </div>
     </div>
-    <div class="hud-row"><span class="hud-label">Level</span><span id="hudLevel">1</span></div>
-    <div class="hud-row"><span class="hud-label">Gold</span><span id="hudGold">0</span></div>
-    <div>
-      <div class="hud-row"><span class="hud-label">HP</span><span id="hpText">20 / 20</span></div>
-      <div class="bar-track"><div class="bar-fill hp-fill" id="hpBar" style="width:100%"></div></div>
+
+    <!-- PANEL 2: HERO SUMMARY CARD -->
+    <div class="hero-summary-card" id="heroSummaryCard">
+      <div class="hero-summary-top">
+        <div class="hero-portrait-mini" id="summaryAvatarIcon">⚔️</div>
+        <div>
+          <div style="font-family:'Cinzel',serif; font-weight:700; font-size:13px; color:#fff;">Akshat</div>
+          <div style="font-size:10px; color:var(--ink-dim);">Lv. <span id="summaryLevel">5</span> Unawakened</div>
+        </div>
+      </div>
+      <div class="hero-summary-stats-list">
+        <div class="stat-item-row"><span style="color:#ef4444;">❤️ HP</span><span id="summaryHP">120</span></div>
+        <div class="stat-item-row"><span style="color:#f59e0b;">⚔️ ATK</span><span id="summaryATK">18</span></div>
+        <div class="stat-item-row"><span style="color:#3b82f6;">🛡️ DEF</span><span id="summaryDEF">12</span></div>
+        <div class="stat-item-row"><span style="color:#a855f7;">🔮 MAG</span><span id="summaryMAG">8</span></div>
+        <div class="stat-item-row"><span style="color:#10b981;">⚡ SPD</span><span id="summarySPD">10</span></div>
+      </div>
+      <button id="btnStats" class="btn-fantasy" style="margin-top:auto; width:100%; font-size:11px; padding:4px 8px;" onclick="openStats()">🛡️ Character <span id="pointsBadge"></span></button>
+      <span id="statSTR" style="display:none;">5</span>
+      <span id="statVIT" style="display:none;">5</span>
+      <span id="statINT" style="display:none;">5</span>
+      <span id="statAGI" style="display:none;">5</span>
+      <button id="btnTree" style="display:none;" onclick="openSkillTree()"></button>
+      <button id="btnInventory" style="display:none;" onclick="openInventory()"></button>
     </div>
-    <div>
-      <div class="hud-row"><span class="hud-label">XP</span><span id="xpText">0 / 20</span></div>
-      <div class="bar-track"><div class="bar-fill xp-fill" id="xpBar" style="width:0%"></div></div>
+
+    <!-- PANEL 3: TABBED MAIN DOCK / GRID INVENTORY -->
+    <div class="tabbed-inventory-card" id="tabbedInventoryPanel">
+      <div class="inv-tabs-row">
+        <div class="inv-subtab-group">
+          <span class="inv-subtab active" onclick="setInvSubtab('Inventory')">Inventory</span>
+          <span class="inv-subtab" onclick="setInvSubtab('Equipment')">Equipment</span>
+          <span class="inv-subtab" onclick="setInvSubtab('Skills')">Skills</span>
+          <span class="inv-subtab" onclick="setInvSubtab('Stats')">Stats</span>
+        </div>
+      </div>
+      <div class="inventory-grid-6x2" id="inventoryGrid6x2">
+        <div class="inv-slot-box" title="Iron Sword">⚔️</div>
+        <div class="inv-slot-box" title="Knight Helmet">🪖</div>
+        <div class="inv-slot-box" title="Steel Gauntlets">🦾</div>
+        <div class="inv-slot-box" title="Leather Bracers">🦺</div>
+        <div class="inv-slot-box" title="Health Potion">🧪<span class="inv-slot-count">5</span></div>
+        <div class="inv-slot-box" title="Mana Potion">🧴<span class="inv-slot-count">3</span></div>
+        <div class="inv-slot-box" title="Ration Bread">🍞<span class="inv-slot-count">8</span></div>
+        <div class="inv-slot-box" title="Teleport Scroll">📜<span class="inv-slot-count">2</span></div>
+        <div class="inv-slot-box" title="Sunbloom Herb">🌿<span class="inv-slot-count">4</span></div>
+        <div class="inv-slot-box" title="Iron Ore">🪨<span class="inv-slot-count">6</span></div>
+        <div class="inv-slot-box" style="opacity:0.35;">🔮</div>
+        <div class="inv-slot-box" style="opacity:0.35;">💎</div>
+      </div>
+      <div class="inv-footer-row">
+        <span>🎒 <span id="invCount">20</span> / 50</span>
+        <div style="display:flex; gap:6px;">
+          <button class="btn-fantasy" style="font-size:10px; padding:2px 8px;" onclick="openInventory()">Sort</button>
+          <button class="btn-fantasy" style="font-size:10px; padding:2px 6px;" onclick="openInventory()">🗑️</button>
+        </div>
+      </div>
     </div>
-    <div class="hud-buttons">
-      <button id="btnStats">Character Sheet<span id="pointsBadge"></span></button>
-      <button id="btnTree">Skill Tree</button>
-      <button id="btnInventory">Inventory (<span id="invCount">0</span>)</button>
-      <button id="btnSound">🔊 Sound: ON</button>
+
+    <!-- PANEL 4: ACTION HOTBAR -->
+    <div class="action-hotbar-card" id="actionHotbarPanel">
+      <div class="hotbar-slots-row">
+        <div class="hotbar-slot-box" title="Slash [Q]" onclick="openSkillTree()">
+          <span class="hotbar-slot-key">Q</span>
+          <span class="hotbar-slot-icon">⚡</span>
+          <span style="font-size:8px; color:var(--ink-dim);">1</span>
+        </div>
+        <div class="hotbar-slot-box" title="Flame Burst [W]" onclick="openSkillTree()">
+          <span class="hotbar-slot-key">W</span>
+          <span class="hotbar-slot-icon">🔥</span>
+          <span style="font-size:8px; color:var(--ink-dim);">2</span>
+        </div>
+        <div class="hotbar-slot-box" title="Shadow Step [E]" onclick="openSkillTree()">
+          <span class="hotbar-slot-key">E</span>
+          <span class="hotbar-slot-icon">🗡️</span>
+          <span style="font-size:8px; color:var(--ink-dim);">3</span>
+        </div>
+        <div class="hotbar-slot-box" title="Arcane Shield [R]" onclick="openSkillTree()">
+          <span class="hotbar-slot-key">R</span>
+          <span class="hotbar-slot-icon">🛡️</span>
+          <span style="font-size:8px; color:var(--ink-dim);">4</span>
+        </div>
+        <div class="hotbar-slot-box ultimate-slot" title="Ultimate Skill [F]" onclick="openSkillTree()">
+          <span class="hotbar-slot-key">F</span>
+          <span class="hotbar-slot-icon">👑</span>
+          <span style="font-size:8px; color:var(--gold);">Ult</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANEL 5: ATMOSPHERIC LORE PANEL -->
+    <div class="atmospheric-lore-card" id="loreQuotePanel">
+      <div class="lore-quote-content">
+        "The journey of a thousand miles begins with a single step."
+        <div class="lore-quote-divider"></div>
+      </div>
     </div>
   </div>
 </div>
 
-<div id="toast" class="toast"></div>
-<div id="modalRoot"></div>
+<div class="dpad" id="dpad">
+  <button class="up" data-dir="up">▲</button>
+  <button class="left" data-dir="left">◀</button>
+  <button class="down" data-dir="down">▼</button>
+  <button class="right" data-dir="right">▶</button>
+</div>
 
 <script>
 /* ================= DATA ================= */
@@ -328,6 +783,78 @@ const CLASSES = {
   }
 };
 
+const CLASS_EVOLUTIONS = {
+  Swordsman: {
+    tier2: { name: "Warrior", levelReq: 10, icon: "⚔️", bonusDesc: "+15% Physical Damage & +10 Max HP" },
+    tier3: [
+      { name: "Blademaster", levelReq: 25, icon: "🗡️", bonusDesc: "+25% Crit Damage & Dual Strike Mastery" },
+      { name: "Berserker", levelReq: 25, icon: "🪓", bonusDesc: "+35% Damage when HP < 50%" }
+    ]
+  },
+  Vanguard: {
+    tier2: { name: "Warrior", levelReq: 10, icon: "⚔️", bonusDesc: "+15% Physical Damage & +10 Max HP" },
+    tier3: [
+      { name: "Blademaster", levelReq: 25, icon: "🗡️", bonusDesc: "+25% Crit Damage & Dual Strike Mastery" },
+      { name: "Berserker", levelReq: 25, icon: "🪓", bonusDesc: "+35% Damage when HP < 50%" }
+    ]
+  },
+  Rogue: {
+    tier2: { name: "Assassin", levelReq: 10, icon: "🗡️", bonusDesc: "+15% Crit Chance & Speed" },
+    tier3: [{ name: "Shadowmaster", levelReq: 25, icon: "🥷", bonusDesc: "+40% Lethal Strike & Smoke Dodge" }]
+  },
+  Assassin: {
+    tier2: { name: "Shadowblade", levelReq: 10, icon: "🗡️", bonusDesc: "+15% Crit Chance & Speed" },
+    tier3: [{ name: "Shadowmaster", levelReq: 25, icon: "🥷", bonusDesc: "+40% Lethal Strike & Smoke Dodge" }]
+  },
+  Mage: {
+    tier2: { name: "Elementalist", levelReq: 10, icon: "🔥", bonusDesc: "+20% Spell Damage & Mana Shield" },
+    tier3: [{ name: "Arcane Sovereign", levelReq: 25, icon: "🌌", bonusDesc: "-1 Focus Cost & Meteor Overload" }]
+  },
+  Ranger: {
+    tier2: { name: "Sharpshooter", levelReq: 10, icon: "🏹", bonusDesc: "+20% Bow Damage & Piercing Arrow" },
+    tier3: [{ name: "Windrunner", levelReq: 25, icon: "🍃", bonusDesc: "+25% Dodge Chance & Triple Shot" }]
+  },
+  Paladin: {
+    tier2: { name: "Templar", levelReq: 10, icon: "✝️", bonusDesc: "+20 Max HP & Radiant Aura" },
+    tier3: [{ name: "Sacred Sentinel", levelReq: 25, icon: "👑", bonusDesc: "+30% Holy Shield & Resurrect Aegis" }]
+  },
+  Monk: {
+    tier2: { name: "Fist of Gales", levelReq: 10, icon: "☯️", bonusDesc: "+15% Attack Speed & Ki Burst" },
+    tier3: [{ name: "Nirvana Master", levelReq: 25, icon: "☸️", bonusDesc: "+30% Counter Strike & Immunity" }]
+  },
+  Necromancer: {
+    tier2: { name: "Soul Reaper", levelReq: 10, icon: "💀", bonusDesc: "+20% Lifesteal & Bone Armor" },
+    tier3: [{ name: "Lich Lord", levelReq: 25, icon: "👑", bonusDesc: "+40% Shadow Damage & Army of the Dead" }]
+  },
+  Berserker: {
+    tier2: { name: "Blood Lord", levelReq: 10, icon: "🪓", bonusDesc: "+25% Attack & Vampirism" },
+    tier3: [{ name: "Warmaster", levelReq: 25, icon: "🔥", bonusDesc: "+50% Rage Damage" }]
+  }
+};
+
+const SKILL_EVOLUTIONS = {
+  'sw_b1': { nextId: 'sw_b1_ev2', name: 'Heavy Strike', mult: 2.2, desc: 'A heavier physical strike dealing 220% ATK.' },
+  'sw_b1_ev2': { nextId: 'sw_b1_ev3', name: 'Devastating Strike', mult: 3.2, desc: 'An ultimate physical strike dealing 320% ATK.' },
+  'mg_p1': { nextId: 'mg_p1_ev2', name: 'Flame Burst', mult: 2.4, desc: 'A fiery burst dealing 240% INT magic damage.' },
+  'mg_p1_ev2': { nextId: 'mg_p1_ev3', name: 'Inferno Supernova', mult: 3.6, desc: 'A cataclysmic supernova dealing 360% INT magic damage.' },
+  'as_s1': { nextId: 'as_s1_ev2', name: 'Phantom Blade', mult: 2.3, desc: 'A phantom slash dealing 230% AGI damage.' },
+  'as_s1_ev2': { nextId: 'as_s1_ev3', name: 'Shadow Annihilation', mult: 3.5, desc: 'Annihilates enemy shadows for 350% AGI damage.' },
+  'rg_s1': { nextId: 'rg_s1_ev2', name: 'Eagle Strike', mult: 2.4, desc: 'An eagle-eyed strike dealing 240% AGI damage.' },
+  'pl_h1': { nextId: 'pl_h1_ev2', name: 'Holy Judgment', mult: 2.5, desc: 'Smite with divine holy power for 250% damage.' }
+};
+
+const GUILD_RANKS = [
+  { rank: 'F', name: 'Novice Adventurer', reqRep: 0, perk: 'Basic Guild Access' },
+  { rank: 'E', name: 'Apprentice Adventurer', reqRep: 50, perk: '+5% Quest Gold' },
+  { rank: 'D', name: 'Bronze Adventurer', reqRep: 120, perk: 'Unlocks D-Rank Dungeons & Guild Shop Discount' },
+  { rank: 'C', name: 'Silver Adventurer', reqRep: 250, perk: '+10% Dungeon XP' },
+  { rank: 'B', name: 'Gold Adventurer', reqRep: 450, perk: 'Unlocks B-Rank Dungeons & Companion Recruitment' },
+  { rank: 'A', name: 'Platinum Adventurer', reqRep: 750, perk: '+15% Rare Drop Rate' },
+  { rank: 'S', name: 'Mythic Adventurer', reqRep: 1200, perk: 'Unlocks S-Rank Dungeons & Divine Artifacts' },
+  { rank: 'SS', name: 'Realm Sovereign', reqRep: 2000, perk: 'Unlocks Abyss Difficulty & Legendary Titles' },
+  { rank: 'SSS', name: 'Eternal Hero', reqRep: 3200, perk: 'Immortal Guild Privilege' }
+];
+
 /* Rare unique skills — not tied to any class tree, only learned from Skill Tomes */
 const UNIQUE_SKILLS = [
   { id:'uniq_starfall', name:'Starfall', type:'damage', mult:2.6, cost:3, flavor:'A blazing meteor descends on your foe.' },
@@ -337,6 +864,7 @@ const UNIQUE_SKILLS = [
 
 const ITEM_POOL = {
   S: [
+    { name:"Celestial Voidbringer 🌌", slot:"weapon", statBonus:{STR:50, AGI:40, INT:40, VIT:30}, critBonus:35, passiveXp:{scope:'all', mult:0.5}, set:"archon" },
     { name:"Dawnfang Blade", slot:"weapon", statBonus:{STR:8, AGI:2}, critBonus:8, set:"vanguard" },
     { name:"Aegis of the Sanctum", slot:"armor", statBonus:{VIT:9, STR:2}, set:"vanguard" },
     { name:"Crown of the Awakened", slot:"accessory", statBonus:{INT:5, AGI:4}, passiveXp:{scope:'all', mult:0.15}, set:"archon" }
@@ -490,18 +1018,18 @@ const RELICS_CATALOG = [
 ];
 
 const BUILDINGS = [
-  { id:"sanctuary", name:"Sanctuary",    x:15,  y:60, w:90, h:85, color:"#5b3fa8" },
-  { id:"guild",     name:"Guild Hall",   x:115, y:60, w:90, h:85, color:"#a8792f" },
-  { id:"merchant",  name:"Merchant",     x:215, y:60, w:90, h:85, color:"#2f7a5b" },
-  { id:"forge",     name:"Forge",        x:315, y:60, w:90, h:85, color:"#8c3a27" },
-  { id:"arena",     name:"Arena",        x:415, y:60, w:90, h:85, color:"#b5651d" },
-  { id:"dungeon",   name:"Dungeon Gate", x:515, y:60, w:90, h:85, color:"#7a2c2c" },
-  { id:"spire",     name:"Spire 100",    x:315, y:200, w:90, h:85, color:"#4a3a99" },
-  { id:"pond",      name:"Fishing Pond", x:20,  y:320, w:110, h:65, color:"#1f5385" },
-  { id:"casino",    name:"Goblin Casino",x:450, y:320, w:110, h:65, color:"#8a2be2" },
-  { id:"portal",    name:"Realm Portal", x:215, y:320, w:110, h:65, color:"#3a7ca5" },
-  { id:"stables",   name:"Mount Stables",x:115, y:320, w:110, h:65, color:"#6b4a2b" },
-  { id:"alchemy",   name:"Alchemy Lab",  x:315, y:320, w:110, h:65, color:"#2a7b6c" }
+  { id:"sanctuary", name:"SANCTUARY",    x:20,  y:35, w:78, h:60, icon:"🏛️", accent:"#d6ae55" },
+  { id:"guild",     name:"GUILD HALL",   x:120, y:35, w:78, h:60, icon:"🛡️", accent:"#8b6cff" },
+  { id:"merchant",  name:"MERCHANT",     x:220, y:35, w:78, h:60, icon:"💰", accent:"#d6ae55" },
+  { id:"forge",     name:"FORGE",        x:320, y:35, w:78, h:60, icon:"🔨", accent:"#d86666" },
+  { id:"arena",     name:"ARENA",        x:420, y:35, w:78, h:60, icon:"⚔️", accent:"#d86666" },
+  { id:"dungeon",   name:"DUNGEON GATE", x:520, y:35, w:78, h:60, icon:"💀", accent:"#d86666" },
+  { id:"spire",     name:"SPIRE 100",    x:281, y:175, w:78, h:60, icon:"🏰", accent:"#8b6cff" },
+  { id:"pond",      name:"FISHING POND", x:40,  y:305, w:78, h:60, icon:"🎣", accent:"#6fa8ff" },
+  { id:"stables",   name:"MOUNT STABLES",x:150, y:305, w:78, h:60, icon:"🐎", accent:"#d6ae55" },
+  { id:"portal",    name:"REALM PORTAL", x:260, y:305, w:78, h:60, icon:"🌌", accent:"#6fa8ff" },
+  { id:"alchemy",   name:"ALCHEMY LAB",  x:370, y:305, w:78, h:60, icon:"🧪", accent:"#4bcb8a" },
+  { id:"casino",    name:"GOBLIN CASINO",x:480, y:305, w:78, h:60, icon:"🎲", accent:"#8b6cff" }
 ];
 
 const GEMS_CATALOG = [
@@ -586,13 +1114,15 @@ function defaultTalentMods(){
 }
 function defaultPlayer(){
   return {
-    class: null, specialization: null, rank: null, level: 1, xp:0, xpToNext: 20,
+    class: null, classEvolution: null, specialization: null, rank: null, level: 1, xp:0, xpToNext: 20,
     statPoints: 0, stats: {STR:5,VIT:5,INT:5,AGI:5},
     hp: 20, maxHp: 20, gold: 0,
-    guildRegistered:false, inventory: [], unlockedSkills: [], fusedSkills: [],
+    guildRegistered:false, guildRank: 'F', guildRep: 0,
+    inventory: [], unlockedSkills: [], fusedSkills: [], skillMastery: {},
     equipment: { weapon:null, armor:null, accessory:null, relic1:null, relic2:null },
     consumables: { potion: 0, elixirMight: 0, flaskFocus: 0 },
     materials: { ironOre: 0, shadowEssence: 0, monsterCore: 0 },
+    cores: { common: 0, uncommon: 0, rare: 0, epic: 0 },
     herbs: { sunbloom: 0, frostlotus: 0, voidshard: 0 },
     dragons: [], activeDragon: null,
     paragonLevel: 0,
@@ -608,7 +1138,8 @@ function defaultPlayer(){
     buildingLevels: { sanctuary: 1, guild: 1, merchant: 1, forge: 1 },
     expedition: null,
     achievements: {},
-    activeTitle: null,
+    unlockedTitles: ['Novice Adventurer'],
+    activeTitle: 'Novice Adventurer',
     currentZone: 'sunlit',
     constellations: { orion: 0, ursa: 0, phoenix: 0 },
     transmog: 'default',
@@ -629,15 +1160,15 @@ const state = {
   nearBoss: null,
   nearColossus: false,
   combat: null,
-  colossusBoss: { x: 280, y: 180, hp: 500, maxHp: 500, phase: 1, active: true },
+  colossusBoss: { x: 410, y: 190, hp: 500, maxHp: 500, phase: 1, active: true },
   selectedMutators: { infernal: false, ironclad: false, vampiric: false },
   worldTime: 0,
   weather: 'clear',
   rainDrops: Array.from({length: 35}, () => ({ x: Math.random()*600, y: Math.random()*400, speed: 220 + Math.random()*180 })),
-  roamingBoss: { x: 440, y: 180 },
+  roamingBoss: { x: 190, y: 190 },
   overworldSecrets: [
-    { type: 'ore', x: 160, y: 240, label: '🪨 Iron Node' },
-    { type: 'rift', x: 480, y: 240, label: '🌟 Magic Rift' }
+    { type: 'ore', x: 80, y: 190, label: '◆ IRON NODE' },
+    { type: 'rift', x: 535, y: 190, label: '✨ MAGIC RIFT' }
   ]
 };
 
@@ -779,23 +1310,40 @@ const ctx = canvas.getContext('2d');
 const SPEED = 160; // pixels per second (frame-rate independent)
 const PSIZE = 20;
 
+function isModalOpen(){
+  const m = document.getElementById('modalRoot');
+  return !!(m && m.children && m.children.length > 0);
+}
+
 window.addEventListener('keydown', e => {
   Sound.init();
   const k = e.key.toLowerCase();
   if(k==='w'||k==='a'||k==='s'||k==='d'||k==='arrowup'||k==='arrowdown'||k==='arrowleft'||k==='arrowright'){
     state.keys[k] = true;
   }
-  if((k==='e' || k===' ' || k==='enter') && !document.getElementById('modalRoot').children.length){
-    if(state.nearBuilding) handleEnter(state.nearBuilding.id);
+  if((k==='e' || k===' ' || k==='enter') && !isModalOpen()){
+    if(state.nearColossus) startColossusBossCombat();
+    else if(state.nearBoss) startRoamingBossCombat();
+    else if(state.nearBuilding) handleEnter(state.nearBuilding.id);
     else if(state.nearSecret) harvestSecret(state.nearSecret.idx);
   }
+  if(!isModalOpen()){
+    if(k==='c') openStats();
+    if(k==='t') openSkillTree();
+    if(k==='i') openInventory();
+    if(k==='q') openGuild();
+    if(k==='m') openDungeonGate();
+    if(k==='a') openAchievements();
+  }
 });
+
 window.addEventListener('keyup', e => {
   const k = e.key.toLowerCase();
   if(k==='w'||k==='a'||k==='s'||k==='d'||k==='arrowup'||k==='arrowdown'||k==='arrowleft'||k==='arrowright'){
     state.keys[k] = false;
   }
 });
+
 document.addEventListener('click', e => {
   Sound.init();
   if (e.target.tagName === 'BUTTON' || e.target.classList.contains('choice-card')) {
@@ -807,12 +1355,12 @@ const btnSoundEl = document.getElementById('btnSound');
 if(btnSoundEl){
   btnSoundEl.addEventListener('click', () => {
     const isMuted = Sound.toggleMute();
-    btnSoundEl.textContent = isMuted ? '🔇 Sound: OFF' : '🔊 Sound: ON';
+    btnSoundEl.textContent = isMuted ? '🔇 OFF' : '🔊 ON';
   });
 }
 
 canvas.addEventListener('click', (e) => {
-  if(!document.getElementById('modalRoot').children.length){
+  if(!isModalOpen()){
     if(state.nearBuilding){
       const rect = canvas.getBoundingClientRect();
       const clickX = e.clientX - rect.left;
@@ -844,8 +1392,14 @@ document.querySelectorAll('#dpad button').forEach(btn=>{
 
 function rectsOverlap(a,b){ return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y; }
 
+function toggleQuestWidget(){
+  const body = document.getElementById('questTrackerBody');
+  if(!body) return;
+  body.style.display = body.style.display === 'none' ? 'block' : 'none';
+}
+
 function update(dt){
-  if(document.getElementById('modalRoot').children.length) return;
+  if(isModalOpen()) return;
   state.worldTime = (state.worldTime || 0) + dt;
 
   // Weather tick
@@ -909,26 +1463,44 @@ function update(dt){
   state.nearBoss = touchingBoss;
   state.nearColossus = touchingColossus;
 
-  const promptBtn = document.getElementById('btnPrompt');
-  if(promptBtn){
+  // UPDATE FLOATING PROMPT CARD
+  const promptCard = document.getElementById('locationPrompt');
+  const promptTitle = document.getElementById('promptTitle');
+  const promptDesc = document.getElementById('promptDesc');
+  const promptIcon = document.getElementById('promptIcon');
+  const btnPrompt = document.getElementById('btnPrompt');
+
+  if(promptCard){
     if(touchingColossus){
-      promptBtn.style.display = 'block';
-      promptBtn.textContent = `Challenge Ancient Stone Colossus 🗿 (Press E / Space)`;
-      promptBtn.onclick = () => startColossusBossCombat();
+      promptCard.style.display = 'flex';
+      promptIcon.textContent = '🗿';
+      promptTitle.textContent = 'Ancient Stone Colossus';
+      promptDesc.textContent = 'A colossal elemental Titan awakens! (500 HP Boss)';
+      btnPrompt.textContent = 'CHALLENGE [E / TAP]';
+      btnPrompt.onclick = () => startColossusBossCombat();
     } else if(touchingBoss){
-      promptBtn.style.display = 'block';
-      promptBtn.textContent = `Challenge Roaming Crimson Fiend 🩸 (Press E / Space)`;
-      promptBtn.onclick = () => startRoamingBossCombat();
+      promptCard.style.display = 'flex';
+      promptIcon.textContent = '🩸';
+      promptTitle.textContent = 'Roaming Crimson Fiend';
+      promptDesc.textContent = 'Blood Moon nightmare fiend hunting in the realm.';
+      btnPrompt.textContent = 'CHALLENGE [E / TAP]';
+      btnPrompt.onclick = () => startRoamingBossCombat();
     } else if(touching){
-      promptBtn.style.display = 'block';
-      promptBtn.textContent = `Enter ${touching.name} (Press E / Space)`;
-      promptBtn.onclick = () => handleEnter(touching.id);
+      promptCard.style.display = 'flex';
+      promptIcon.textContent = touching.icon || '🏰';
+      promptTitle.textContent = touching.name;
+      promptDesc.textContent = touching.desc || 'Interact to enter location.';
+      btnPrompt.textContent = 'ENTER [E / TAP]';
+      btnPrompt.onclick = () => handleEnter(touching.id);
     } else if(touchingSecret){
-      promptBtn.style.display = 'block';
-      promptBtn.textContent = `Harvest ${touchingSecret.sec.label} (Press E / Space)`;
-      promptBtn.onclick = () => harvestSecret(touchingSecret.idx);
+      promptCard.style.display = 'flex';
+      promptIcon.textContent = touchingSecret.sec.type === 'ore' ? '🪨' : '🌟';
+      promptTitle.textContent = touchingSecret.sec.label;
+      promptDesc.textContent = 'Harvest valuable overworld materials.';
+      btnPrompt.textContent = 'HARVEST [E / TAP]';
+      btnPrompt.onclick = () => harvestSecret(touchingSecret.idx);
     } else {
-      promptBtn.style.display = 'none';
+      promptCard.style.display = 'none';
     }
   }
 }
@@ -955,161 +1527,180 @@ function harvestSecret(idx){
   refreshHud();
 }
 
+const mapBgImage = new Image();
+mapBgImage.src = 'town_map.jpg';
+let mapBgLoaded = false;
+mapBgImage.onload = () => { mapBgLoaded = true; };
+
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   
   const cycleSec = (state.worldTime || 0) % 180;
   const zone = (state.player && state.player.currentZone) || 'sunlit';
-  let skyColor = "#171a2f", groundColor = "#20253f", timeLabel = "☀️ Day";
-  if(zone === 'ashen'){
-    skyColor = "#241014"; groundColor = "#1e0c10"; timeLabel = "🔥 Ashen Realm";
-  } else if(zone === 'frost'){
-    skyColor = "#0d1d2a"; groundColor = "#0a1724"; timeLabel = "❄️ Frost Realm";
+  let timeLabel = "☀️ Day";
+  if(cycleSec >= 150){ timeLabel = "🩸 Blood Moon"; }
+  else if(cycleSec >= 90){ timeLabel = "🌙 Night"; }
+  else if(cycleSec >= 60){ timeLabel = "🌆 Dusk"; }
+
+  // Draw Rich 2.5D Town Map Background Image from Reference Art (Cropped to town scene only)
+  if(mapBgLoaded){
+    ctx.drawImage(mapBgImage, 0, 80, 1024, 420, 0, 0, canvas.width, canvas.height);
   } else {
-    if(cycleSec >= 150){ skyColor = "#2e0b12"; groundColor = "#3a1017"; timeLabel = "🩸 Blood Moon"; }
-    else if(cycleSec >= 90){ skyColor = "#0b0d1e"; groundColor = "#10132a"; timeLabel = "🌙 Night"; }
-    else if(cycleSec >= 60){ skyColor = "#2a1936"; groundColor = "#331e42"; timeLabel = "🌆 Dusk"; }
+    ctx.fillStyle = "#0B1020";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
-  ctx.fillStyle = skyColor;
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle = groundColor;
-  ctx.fillRect(0,90,canvas.width,canvas.height-90);
-
-  if(state.weather === 'rain' && state.rainDrops){
-    ctx.strokeStyle = "rgba(142, 192, 255, 0.4)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    state.rainDrops.forEach(d => {
-      ctx.moveTo(d.x, d.y);
-      ctx.lineTo(d.x - 2, d.y + 7);
-    });
-    ctx.stroke();
+  // Update Weather Badge in Top HUD
+  const weatherEl = document.getElementById('hudWeatherBadge');
+  if(weatherEl){
+    weatherEl.textContent = `${timeLabel} ${state.weather==='rain'?'🌧️':''}`;
+    weatherEl.style.color = cycleSec >= 150 ? '#D86666' : '#D6AE55';
   }
 
-  // Draw HUD Time & Weather Badge
-  ctx.fillStyle = "rgba(10, 12, 26, 0.75)";
-  ctx.fillRect(canvas.width - 175, 10, 165, 24);
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
-  ctx.strokeRect(canvas.width - 175, 10, 165, 24);
-  ctx.fillStyle = cycleSec >= 150 ? "#e2555f" : "#e8b34d";
-  ctx.font = "bold 11px Inter";
-  ctx.textAlign = "center";
-  ctx.fillText(`${timeLabel} ${state.weather==='rain'?'🌧️':''}`, canvas.width - 92, 26);
-
-  BUILDINGS.forEach(b=>{
+  // DRAW ELEGANT FLOATING LOCATION PILL BADGES OVER TOWN BUILDINGS
+  BUILDINGS.forEach(b => {
     const isNear = state.nearBuilding && state.nearBuilding.id === b.id;
-    ctx.fillStyle = b.color;
-    ctx.fillRect(b.x,b.y,b.w,b.h);
-    ctx.strokeStyle = isNear ? "#e8b34d" : "rgba(255,255,255,0.15)";
-    ctx.lineWidth = isNear ? 2 : 1;
-    ctx.strokeRect(b.x,b.y,b.w,b.h);
-    ctx.lineWidth = 1;
-    
-    ctx.fillStyle = isNear ? "#e8b34d" : "#e7e6f0";
-    ctx.font = isNear ? "bold 12px Inter" : "12px Inter";
-    ctx.textAlign = "center";
-    ctx.fillText(b.name, b.x+b.w/2, b.y+b.h+16);
 
-    if(isNear){
-      ctx.fillStyle = "rgba(124, 92, 255, 0.95)";
-      ctx.fillRect(b.x - 8, b.y - 28, b.w + 16, 22);
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "bold 11px Inter";
-      ctx.fillText("[E / Tap] Enter", b.x + b.w/2, b.y - 13);
+    ctx.font = "600 10.5px 'Cinzel', serif";
+    const textWidth = ctx.measureText(b.name).width;
+    const pillW = Math.max(74, textWidth + 16);
+    const pillH = 20;
+    const pillX = b.x + b.w/2 - pillW/2;
+    const pillY = b.y + b.h/2 - pillH/2;
+
+    // Badge Fill & Glow Border
+    ctx.fillStyle = isNear ? "rgba(22, 28, 54, 0.95)" : "rgba(10, 14, 26, 0.82)";
+    ctx.strokeStyle = isNear ? "#FEF08A" : "rgba(214, 174, 85, 0.4)";
+    ctx.lineWidth = isNear ? 1.5 : 1;
+
+    ctx.beginPath();
+    if(ctx.roundRect){
+      ctx.roundRect(pillX, pillY, pillW, pillH, 5);
+    } else {
+      ctx.rect(pillX, pillY, pillW, pillH);
     }
+    ctx.fill();
+    ctx.stroke();
+
+    // Badge Text
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = isNear ? "#FEF08A" : "#E2E8F0";
+    ctx.fillText(b.name, b.x + b.w/2, b.y + b.h/2);
   });
 
   // Draw Roaming Blood Moon Boss
   if(cycleSec >= 150 && state.roamingBoss){
     const bx = state.roamingBoss.x, by = state.roamingBoss.y;
-    ctx.fillStyle = "rgba(226, 85, 95, 0.3)";
+    ctx.fillStyle = "rgba(216, 102, 102, 0.2)";
     ctx.beginPath();
-    ctx.arc(bx, by, 16 + Math.sin(state.worldTime*6)*4, 0, Math.PI*2);
+    ctx.arc(bx, by, 14, 0, Math.PI*2);
     ctx.fill();
-    ctx.fillStyle = "#e2555f";
-    ctx.font = "18px Inter";
+    ctx.font = "16px Inter";
     ctx.textAlign = "center";
-    ctx.fillText("🩸", bx, by + 6);
+    ctx.textBaseline = "middle";
+    ctx.fillText("🩸", bx, by);
+    ctx.font = "600 10px 'Cinzel', serif";
+    ctx.fillStyle = "#D86666";
+    ctx.fillText("BLOOD MONSTER", bx, by - 16);
   }
 
   // Draw Ancient Stone Colossus Raid Boss
   if(state.colossusBoss && state.colossusBoss.active){
     const cx = state.colossusBoss.x, cy = state.colossusBoss.y;
-    ctx.fillStyle = "rgba(107, 74, 43, 0.4)";
+    const isNearCol = state.nearColossus;
+    ctx.fillStyle = isNearCol ? "rgba(214, 174, 85, 0.25)" : "rgba(214, 174, 85, 0.1)";
     ctx.beginPath();
-    ctx.arc(cx, cy, 22 + Math.sin(state.worldTime*4)*3, 0, Math.PI*2);
+    ctx.arc(cx, cy, 14, 0, Math.PI*2);
     ctx.fill();
-    ctx.fillStyle = "#e8b34d";
-    ctx.font = "22px Inter";
+    ctx.font = "16px Inter";
     ctx.textAlign = "center";
-    ctx.fillText("🗿", cx, cy + 8);
-    ctx.font = "bold 10px Inter";
-    ctx.fillText("Ancient Colossus", cx, cy - 22);
+    ctx.textBaseline = "middle";
+    ctx.fillText("🗿", cx, cy);
+    ctx.font = "600 10px 'Cinzel', serif";
+    ctx.fillStyle = isNearCol ? "#F2F0EA" : "#8F98B2";
+    ctx.fillText("ANCIENT COLOSSUS", cx, cy - 16);
   }
 
-  // Draw Hero Transmog Weapon Aura
+  // DRAW HERO SELECTION AURA & SPRITE
+  const hx = state.pos.x, hy = state.pos.y;
+  
+  // Subtle Ground Shadow
+  ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+  ctx.beginPath();
+  ctx.ellipse(hx + PSIZE/2, hy + PSIZE - 1, 10, 4, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Subtle Proximity Aura Ring
+  ctx.strokeStyle = "rgba(214, 174, 85, 0.4)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(hx + PSIZE/2, hy + PSIZE/2, 14, 0, Math.PI*2);
+  ctx.stroke();
+
+  // Transmog Weapon Aura
   const transmog = state.player.transmog || 'default';
   if(transmog !== 'default'){
     const tData = TRANSMOG_CATALOG.find(t=>t.id===transmog);
     if(tData){
       ctx.strokeStyle = tData.color;
-      ctx.lineWidth = 3 + Math.sin(state.worldTime*8)*1.5;
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(state.pos.x + PSIZE/2, state.pos.y + PSIZE/2, 14 + Math.cos(state.worldTime*4)*2, 0, Math.PI*2);
+      ctx.arc(hx + PSIZE/2, hy + PSIZE/2, 16, 0, Math.PI*2);
       ctx.stroke();
-      ctx.lineWidth = 1;
     }
   }
 
-  // Draw Hero Golden Shimmer Aura if title equipped
-  if(state.player.activeTitle){
-    ctx.strokeStyle = "#e8b34d";
-    ctx.lineWidth = 2 + Math.sin(state.worldTime*5);
-    ctx.beginPath();
-    ctx.arc(state.pos.x + PSIZE/2, state.pos.y + PSIZE/2, 18, 0, Math.PI*2);
-    ctx.stroke();
-    ctx.lineWidth = 1;
-  }
+  // Hero Body Frame
+  const heroGrad = ctx.createLinearGradient(hx, hy, hx, hy + PSIZE);
+  heroGrad.addColorStop(0, "#D6AE55");
+  heroGrad.addColorStop(1, "#96752d");
+  ctx.fillStyle = heroGrad;
+  ctx.fillRect(hx, hy, PSIZE, PSIZE);
+  ctx.strokeStyle = "#080a14";
+  ctx.strokeRect(hx, hy, PSIZE, PSIZE);
 
-  ctx.fillStyle = "#e8b34d";
-  ctx.fillRect(state.pos.x, state.pos.y, PSIZE, PSIZE);
-  ctx.strokeStyle = "#0d0e1a";
-  ctx.strokeRect(state.pos.x, state.pos.y, PSIZE, PSIZE);
-
+  // Active Pet & Mount Followers
   if(state.player.activePet){
     const petData = PETS_CATALOG.find(pt=>pt.id===state.player.activePet);
-    const px = state.pos.x - 14;
-    const py = state.pos.y + 4;
-    ctx.fillStyle = petData ? petData.color : "#8ec0ff";
-    ctx.beginPath();
-    ctx.arc(px + 6, py + 6, 6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.font = "10px Inter";
+    const px = hx - 12, py = hy + 2;
+    ctx.font = "11px Inter";
     ctx.textAlign = "center";
-    ctx.fillText(petData ? petData.icon : "🐾", px + 6, py - 4);
+    ctx.textBaseline = "middle";
+    ctx.fillText(petData ? petData.icon : "🐾", px + 4, py + 4);
   }
-
   if(state.player.activeMount){
     const mData = MOUNTS_CATALOG.find(m=>m.id===state.player.activeMount);
-    const mx = state.pos.x + PSIZE + 2;
-    const my = state.pos.y + 4;
-    ctx.font = "14px Inter";
+    ctx.font = "13px Inter";
     ctx.textAlign = "center";
-    ctx.fillText(mData ? mData.icon : "🐴", mx + 4, my + 10);
+    ctx.textBaseline = "middle";
+    ctx.fillText(mData ? mData.icon : "🐴", hx + PSIZE + 6, hy + 8);
   }
 
+  // Draw Overworld Secret Harvesting Nodes
   if(state.overworldSecrets){
-    state.overworldSecrets.forEach(node=>{
-      ctx.fillStyle = node.type === 'ore' ? '#e8b34d' : '#8ec0ff';
+    state.overworldSecrets.forEach((node, idx)=>{
+      const isNearNode = state.nearSecret && state.nearSecret.idx === idx;
+      ctx.fillStyle = node.type === 'ore' ? '#D6AE55' : '#4BCB8A';
       ctx.beginPath();
-      ctx.arc(node.x, node.y, 8, 0, Math.PI*2);
+      ctx.arc(node.x, node.y, 4, 0, Math.PI*2);
       ctx.fill();
-      ctx.font = "11px Inter";
+      if(isNearNode){
+        ctx.strokeStyle = node.type === 'ore' ? '#D6AE55' : '#4BCB8A';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, 8, 0, Math.PI*2);
+        ctx.stroke();
+      }
+      ctx.font = "600 10px 'Cinzel', serif";
       ctx.textAlign = "center";
-      ctx.fillText(node.label, node.x, node.y - 12);
+      ctx.textBaseline = "alphabetic";
+      ctx.fillStyle = isNearNode ? "#F2F0EA" : "#8F98B2";
+      ctx.fillText(node.label, node.x, node.y - 10);
     });
   }
+
+  drawMinimap();
 }
 
 let lastTime = 0;
@@ -1124,8 +1715,185 @@ function loop(timestamp){
 }
 requestAnimationFrame(loop);
 
+/* ================= GAME LOG & MINIMAP & INVENTORY HELPERS ================= */
+let activeLogTab = 'All';
+const gameLogs = [
+  { msg: "🪙 You received 120 Gold", color: "var(--gold)", type: "All" },
+  { msg: "✨ You gained 200 XP", color: "var(--gold-bright)", type: "All" },
+  { msg: "🎒 You picked up [Health Potion] x1", color: "#38ef7d", type: "All" },
+  { msg: "📜 Quest updated: A New Beginning", color: "var(--gold)", type: "All" }
+];
+
+function addGameLog(msg, color="var(--ink)", type="All"){
+  gameLogs.unshift({ msg, color, type, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) });
+  if(gameLogs.length > 40) gameLogs.pop();
+  renderGameLogs();
+}
+
+function setChatTab(tab){
+  activeLogTab = tab;
+  document.querySelectorAll('.chat-tab').forEach(el => {
+    el.classList.toggle('active', el.textContent.trim() === tab);
+  });
+  renderGameLogs();
+}
+
+function renderGameLogs(){
+  const body = document.getElementById('logMessagesBody');
+  if(!body) return;
+  const filtered = activeLogTab === 'All' ? gameLogs : gameLogs.filter(l => l.type === activeLogTab || l.type === 'All');
+  body.innerHTML = filtered.map(l => `<div class="log-msg-item" style="color:${l.color}">• ${l.msg}</div>`).join('');
+}
+
+function drawMinimap(){
+  const mCanvas = document.getElementById('minimapCanvas');
+  if(!mCanvas) return;
+  const mctx = mCanvas.getContext('2d');
+  const w = mCanvas.width, h = mCanvas.height;
+  
+  mctx.clearRect(0,0,w,h);
+  
+  // Background terrain
+  mctx.fillStyle = "#0d1326";
+  mctx.beginPath();
+  mctx.arc(w/2, h/2, w/2, 0, Math.PI*2);
+  mctx.fill();
+  
+  // Grid lines
+  mctx.strokeStyle = "rgba(214, 174, 85, 0.15)";
+  mctx.lineWidth = 1.5;
+  mctx.beginPath();
+  mctx.moveTo(10, h/2); mctx.lineTo(w-10, h/2);
+  mctx.moveTo(w/2, 10); mctx.lineTo(w/2, h-10);
+  mctx.stroke();
+  
+  // Building markers (yellow square)
+  if(typeof BUILDINGS !== 'undefined' && BUILDINGS){
+    mctx.fillStyle = "#d6ae55";
+    BUILDINGS.forEach(b => {
+      const mx = (b.x / 640) * w;
+      const my = (b.y / 420) * h;
+      mctx.fillRect(mx - 2, my - 2, 4, 4);
+    });
+  }
+  
+  // Roaming Boss marker (red dot)
+  if(state.colossusBoss && state.colossusBoss.active){
+    const bx = (state.colossusBoss.x / 640) * w;
+    const by = (state.colossusBoss.y / 420) * h;
+    mctx.fillStyle = "#ef4444";
+    mctx.beginPath();
+    mctx.arc(bx, by, 3, 0, Math.PI*2);
+    mctx.fill();
+  }
+  
+  // Player dot (glowing cyan dot)
+  if(state.pos){
+    const px = (state.pos.x / 640) * w;
+    const py = (state.pos.y / 420) * h;
+    mctx.fillStyle = "#38ef7d";
+    mctx.shadowColor = "#38ef7d";
+    mctx.shadowBlur = 6;
+    mctx.beginPath();
+    mctx.arc(px, py, 3.5, 0, Math.PI*2);
+    mctx.fill();
+    mctx.shadowBlur = 0;
+  }
+}
+
+let activeInvSubtab = 'Inventory';
+function setInvSubtab(tab){
+  activeInvSubtab = tab;
+  document.querySelectorAll('.inv-subtab').forEach(el => {
+    el.classList.toggle('active', el.textContent.trim() === tab);
+  });
+  renderTabbedInventory();
+}
+
+function renderTabbedInventory(){
+  const grid = document.getElementById('inventoryGrid6x2');
+  if(!grid) return;
+  const p = state.player;
+  if(!p) return;
+  
+  if(activeInvSubtab === 'Inventory'){
+    const items = [];
+    if(p.inventory && p.inventory.length){
+      p.inventory.forEach(it => {
+        const icon = it.isTome ? '📜' : (it.slot === 'weapon' ? '⚔️' : (it.slot === 'armor' ? '🦺' : '💍'));
+        items.push({ icon, name: it.name, count: 1 });
+      });
+    }
+    if(p.consumables){
+      if(p.consumables.potion > 0) items.push({ icon: '🧪', name: 'Health Potion', count: p.consumables.potion });
+      if(p.consumables.elixirMight > 0) items.push({ icon: '🧴', name: 'Might Elixir', count: p.consumables.elixirMight });
+    }
+    if(p.materials){
+      if(p.materials.ironOre > 0) items.push({ icon: '🪨', name: 'Iron Ore', count: p.materials.ironOre });
+      if(p.materials.shadowEssence > 0) items.push({ icon: '🔮', name: 'Shadow Essence', count: p.materials.shadowEssence });
+    }
+    const defaultIcons = ['⚔️', '🪖', '🦾', '🦺', '🧪', '🧴', '🍞', '📜', '🌿', '🪨', '🔮', '💎'];
+    let html = '';
+    for(let i = 0; i < 12; i++){
+      if(items[i]){
+        html += `<div class="inv-slot-box" title="${items[i].name}">
+          ${items[i].icon}
+          ${items[i].count > 1 ? `<span class="inv-slot-count">${items[i].count}</span>` : ''}
+        </div>`;
+      } else {
+        html += `<div class="inv-slot-box" style="opacity: 0.35;">${defaultIcons[i % defaultIcons.length]}</div>`;
+      }
+    }
+    grid.innerHTML = html;
+  } else if(activeInvSubtab === 'Equipment'){
+    const eq = p.equipment || {};
+    grid.innerHTML = `
+      <div class="inv-slot-box" title="Weapon">${eq.weapon ? '⚔️' : '🗡️'}</div>
+      <div class="inv-slot-box" title="Armor">${eq.armor ? '🦺' : '🛡️'}</div>
+      <div class="inv-slot-box" title="Accessory">${eq.accessory ? '💍' : '📿'}</div>
+      <div class="inv-slot-box" title="Relic 1">${eq.relic1 ? '🔮' : '✨'}</div>
+      <div class="inv-slot-box" title="Relic 2">${eq.relic2 ? '📜' : '📜'}</div>
+      <div class="inv-slot-box" style="opacity:0.25;">🔒</div>
+      <div class="inv-slot-box" style="opacity:0.25;">🔒</div>
+      <div class="inv-slot-box" style="opacity:0.25;">🔒</div>
+      <div class="inv-slot-box" style="opacity:0.25;">🔒</div>
+      <div class="inv-slot-box" style="opacity:0.25;">🔒</div>
+      <div class="inv-slot-box" style="opacity:0.25;">🔒</div>
+      <div class="inv-slot-box" style="opacity:0.25;">🔒</div>
+    `;
+  } else if(activeInvSubtab === 'Skills'){
+    grid.innerHTML = `
+      <div class="inv-slot-box" title="Slash">⚡</div>
+      <div class="inv-slot-box" title="Flame Burst">🔥</div>
+      <div class="inv-slot-box" title="Shadow Step">🗡️</div>
+      <div class="inv-slot-box" title="Arcane Shield">🛡️</div>
+      <div class="inv-slot-box" title="Ultimate">👑</div>
+      <div class="inv-slot-box" style="opacity:0.25;">🔒</div>
+      <div class="inv-slot-box" style="opacity:0.25;">🔒</div>
+      <div class="inv-slot-box" style="opacity:0.25;">🔒</div>
+      <div class="inv-slot-box" style="opacity:0.25;">🔒</div>
+      <div class="inv-slot-box" style="opacity:0.25;">🔒</div>
+      <div class="inv-slot-box" style="opacity:0.25;">🔒</div>
+      <div class="inv-slot-box" style="opacity:0.25;">🔒</div>
+    `;
+  } else if(activeInvSubtab === 'Stats'){
+    const eff = getEffectiveStats(p);
+    grid.innerHTML = `
+      <div style="grid-column: span 6; font-size: 11px; color: var(--gold-bright); display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-around; align-items: center; padding: 10px;">
+        <span>STR: ${eff.STR}</span>
+        <span>VIT: ${eff.VIT}</span>
+        <span>INT: ${eff.INT}</span>
+        <span>AGI: ${eff.AGI}</span>
+        <span>ATK: ${eff.STR * 2 + 10}</span>
+        <span>DEF: ${eff.VIT * 2 + 5}</span>
+      </div>
+    `;
+  }
+}
+
 /* ================= UI HELPERS ================= */
 function toast(msg, color){
+  addGameLog(msg, color);
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.style.borderColor = color || 'var(--violet-dim)';
@@ -1230,7 +1998,11 @@ function statBonusText(item){
 
 function refreshHud(){
   const p = state.player;
-  document.getElementById('hudClass').textContent = p.class ? p.class : "Unawakened";
+  const eff = getEffectiveStats(p);
+
+  const displayClassName = p.classEvolution ? `${p.class} · ${p.classEvolution}` : (p.class ? p.class : "Unawakened");
+  document.getElementById('hudClass').textContent = displayClassName;
+  
   const rankEl = document.getElementById('hudRank');
   if(p.rank){
     rankEl.style.display = 'inline-block';
@@ -1238,15 +2010,84 @@ function refreshHud(){
     rankEl.style.background = rankColor(p.rank) + "22";
     rankEl.style.color = rankColor(p.rank);
     rankEl.style.border = `1px solid ${rankColor(p.rank)}`;
+  } else {
+    rankEl.style.display = 'none';
   }
+
+  const specEl = document.getElementById('hudSpec');
+  if(specEl){
+    if(p.specialization){
+      specEl.style.display = 'inline-block';
+      specEl.textContent = p.specialization;
+    } else {
+      specEl.style.display = 'none';
+    }
+  }
+
+  const avatarEl = document.getElementById('hudAvatarIcon');
+  if(avatarEl && p.class && CLASSES[p.class]){
+    avatarEl.textContent = CLASSES[p.class].icon;
+  }
+
   document.getElementById('hudLevel').textContent = p.level;
   document.getElementById('hudGold').textContent = p.gold;
+  
+  const oreEl = document.getElementById('hudOre');
+  if(oreEl) oreEl.textContent = (p.materials && p.materials.ironOre) || 0;
+  
+  const essEl = document.getElementById('hudEssence');
+  if(essEl) essEl.textContent = (p.materials && p.materials.shadowEssence) || 0;
+  
+  const coreEl = document.getElementById('hudCores');
+  if(coreEl) coreEl.textContent = (p.materials && p.materials.monsterCore) || 0;
+
+  const strEl = document.getElementById('statSTR'); if(strEl) strEl.textContent = eff.STR;
+  const vitEl = document.getElementById('statVIT'); if(vitEl) vitEl.textContent = eff.VIT;
+  const intEl = document.getElementById('statINT'); if(intEl) intEl.textContent = eff.INT;
+  const agiEl = document.getElementById('statAGI'); if(agiEl) agiEl.textContent = eff.AGI;
+
+  const maxMp = Math.round(50 + (p.level * 10) + (eff.INT * 4));
+  const currentMp = maxMp;
+  const mpTextEl = document.getElementById('mpText'); if(mpTextEl) mpTextEl.textContent = `${currentMp} / ${maxMp}`;
+  const mpBarEl = document.getElementById('mpBar'); if(mpBarEl) mpBarEl.style.width = `100%`;
+
+  const sumAv = document.getElementById('summaryAvatarIcon');
+  if(sumAv && p.class && CLASSES[p.class]) sumAv.textContent = CLASSES[p.class].icon;
+  const sumLvl = document.getElementById('summaryLevel'); if(sumLvl) sumLvl.textContent = p.level;
+  const sHP = document.getElementById('summaryHP'); if(sHP) sHP.textContent = p.maxHp;
+  const sATK = document.getElementById('summaryATK'); if(sATK) sATK.textContent = (eff.STR * 2 + 10);
+  const sDEF = document.getElementById('summaryDEF'); if(sDEF) sDEF.textContent = (eff.VIT * 2 + 5);
+  const sMAG = document.getElementById('summaryMAG'); if(sMAG) sMAG.textContent = (eff.INT * 2 + 4);
+  const sSPD = document.getElementById('summarySPD'); if(sSPD) sSPD.textContent = (eff.AGI * 2 + 8);
+
   document.getElementById('hpText').textContent = `${p.hp} / ${p.maxHp}`;
   document.getElementById('hpBar').style.width = `${(p.hp/p.maxHp)*100}%`;
-  document.getElementById('xpText').textContent = `${p.xp} / ${p.xpToNext}`;
-  document.getElementById('xpBar').style.width = `${(p.xp/p.xpToNext)*100}%`;
+  const xpTextEl = document.getElementById('xpText'); if(xpTextEl) xpTextEl.textContent = `${p.xp} / ${p.xpToNext}`;
+  const xpBarEl = document.getElementById('xpBar'); if(xpBarEl) xpBarEl.style.width = `${(p.xp/p.xpToNext)*100}%`;
   document.getElementById('invCount').textContent = p.inventory.length;
   document.getElementById('pointsBadge').textContent = p.statPoints>0 ? ` (${p.statPoints})` : '';
+
+  // Update Quest Tracker UI
+  const q = currentQuest();
+  const qTitle = document.getElementById('questTitle');
+  if(qTitle){
+    if(q){
+      const done = questComplete(q);
+      qTitle.textContent = q.desc.split('(')[0];
+      document.getElementById('questDesc').textContent = q.desc;
+      document.getElementById('questProgress').textContent = questProgressText(q) + (done ? ' (COMPLETE!)' : '');
+      document.getElementById('questReward').textContent = `Reward: +${q.rewardGold}g${q.rewardXp?` · +${q.rewardXp} XP`:''}`;
+    } else {
+      qTitle.textContent = `Master Adventurer`;
+      document.getElementById('questDesc').textContent = `All guild quests complete. Prove your dominance in the Spire!`;
+      document.getElementById('questProgress').textContent = `Spire Floor ${p.spireFloor||1}`;
+      document.getElementById('questReward').textContent = `Reward: Eternal Glory`;
+    }
+  }
+
+  renderTabbedInventory();
+  renderGameLogs();
+
   saveGame();
 }
 
@@ -1303,6 +2144,12 @@ function openSkillTree(){
       const levelOk = p.level >= node.unlockLevel;
       const goldOk = p.gold >= node.goldCost;
       let actionHtml;
+      const mastery = (p.skillMastery && p.skillMastery[node.id]) || 0;
+      let masteryBadge = '';
+      if(unlocked){
+        const mTier = mastery >= 100 ? '✨ Mastered' : mastery >= 75 ? '🔥 Advanced' : mastery >= 50 ? '⚡ Enhanced (-1 Focus)' : mastery >= 25 ? '🗡️ Improved' : 'Novice';
+        masteryBadge = `<div style="font-size:10.5px; color:var(--cyan); margin-top:2px;">Mastery: <b>${mastery}/100</b> (${mTier})</div>`;
+      }
       if(unlocked){
         actionHtml = `<span class="rank-pill" style="background:var(--good)22; color:var(--good); border:1px solid var(--good);">Unlocked</span>`;
       } else if(!prereqOk){
@@ -1312,7 +2159,7 @@ function openSkillTree(){
       }
       return `
         <div class="item-row">
-          <span><b>${node.name}</b><div style="color:var(--ink-dim); font-size:11px; margin-top:2px;">${describeSkillNode(node)}</div></span>
+          <span><b>${node.name}</b><div style="color:var(--ink-dim); font-size:11px; margin-top:2px;">${describeSkillNode(node)}</div>${masteryBadge}</span>
           ${actionHtml}
         </div>`;
     }).join('');
@@ -2416,14 +3263,51 @@ function openSanctuary(){
       </div>`;
   }).join('');
 
+  let evolutionHtml = '';
+  const evoData = CLASS_EVOLUTIONS[p.class];
+  if(evoData){
+    if(p.level >= 10 && !p.classEvolution && evoData.tier2){
+      evolutionHtml = `
+        <p class="branch-title">🔥 Class Evolution Milestone Unlocked (Level 10+)</p>
+        <div class="item-row" style="border:1px solid var(--gold); background:rgba(240,197,98,0.1); padding:10px; border-radius:8px; margin-bottom:10px;">
+          <span>
+            <b>${evoData.tier2.icon} Evolve to ${evoData.tier2.name}</b>
+            <div style="color:var(--gold); font-size:11.5px; margin-top:2px;">${evoData.tier2.bonusDesc}</div>
+          </span>
+          <button class="primary" onclick="evolveClass('${evoData.tier2.name}')">Evolve Class</button>
+        </div>
+      `;
+    } else if(p.level >= 25 && evoData.tier3 && p.classEvolution === evoData.tier2.name){
+      const tier3Options = evoData.tier3.map(t3 => `
+        <div class="item-row" style="border:1px solid var(--violet); background:rgba(140,82,255,0.1); padding:10px; border-radius:8px; margin-bottom:6px;">
+          <span>
+            <b>${t3.icon} Ascend to ${t3.name}</b>
+            <div style="color:var(--cyan); font-size:11.5px; margin-top:2px;">${t3.bonusDesc}</div>
+          </span>
+          <button class="primary" style="background:linear-gradient(90deg, var(--violet), #b83bfa);" onclick="evolveClass('${t3.name}')">Ascend Class</button>
+        </div>
+      `).join('');
+      evolutionHtml = `
+        <p class="branch-title">🌌 Master Class Ascension (Level 25+)</p>
+        ${tier3Options}
+      `;
+    } else if(p.classEvolution){
+      evolutionHtml = `
+        <p class="branch-title">⚡ Class Evolution Active</p>
+        <div style="color:var(--gold); font-size:12px; margin-bottom:8px;">Current Class Rank: <b>${p.classEvolution}</b></div>
+      `;
+    }
+  }
+
   openModal(`
     <button class="close-x" onclick="closeModal()">✕</button>
     <h2>The Sanctuary</h2>
-    <p class="desc">The old flame recognizes you as a <b>${p.rank}-Rank ${p.specialization ? p.specialization + ' ' : ''}${p.class}</b>.</p>
+    <p class="desc">The old flame recognizes you as a <b>${p.rank}-Rank ${p.classEvolution ? p.classEvolution + ' ' : ''}${p.class}</b>.</p>
     <div style="display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;">
       <button class="primary" onclick="openConstellations()">⭐ Celestial Constellation Stargazing</button>
       <button onclick="openDragonHatchery()">🐉 Dragon Hatchery</button>
     </div>
+    ${evolutionHtml}
     ${sancUpgradeHtml}
     ${specHtml}
     ${trialHtml}
@@ -2433,6 +3317,15 @@ function openSanctuary(){
     <div class="choice-row">${petCards}</div>
     <div class="modal-actions"><button onclick="closeModal()">Leave</button></div>
   `);
+}
+
+function evolveClass(evoName){
+  const p = state.player;
+  p.classEvolution = evoName;
+  refreshHud();
+  Sound.levelUp();
+  toast(`🔥 CLASS EVOLVED! You are now a ${evoName}!`, '#f0c562');
+  openSanctuary();
 }
 
 function chooseSpecialization(specId){
@@ -2632,10 +3525,28 @@ function openGuild(){
       </div>`;
   }).join('');
 
+  const curRankObj = GUILD_RANKS.find(r=>r.rank===(p.guildRank||'F')) || GUILD_RANKS[0];
+  const nextRankObj = GUILD_RANKS[GUILD_RANKS.findIndex(r=>r.rank===(p.guildRank||'F')) + 1];
+  const repText = nextRankObj ? `${p.guildRep||0} / ${nextRankObj.reqRep} REP` : 'MAX RANK';
+  const guildRankHeaderHtml = `
+    <div style="border:1px solid var(--panel-border); background:rgba(14,18,34,0.7); padding:10px 14px; border-radius:8px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <div style="font-family:'Cinzel',serif; font-weight:700; font-size:14px; color:var(--gold);">
+          <span class="rank-pill" style="background:var(--gold)22; color:var(--gold); border:1px solid var(--gold);">${curRankObj.rank}-RANK</span> ${curRankObj.name}
+        </div>
+        <div style="font-size:11px; color:var(--ink-dim); margin-top:3px;">Perk: ${curRankObj.perk}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:12px; font-weight:700; color:var(--cyan);">${repText}</div>
+        <div style="font-size:10px; color:var(--ink-dim);">Guild Reputation</div>
+      </div>
+    </div>
+  `;
+
   openModal(`
     <button class="close-x" onclick="closeModal()">✕</button>
     <h2>Guild Hall</h2>
-    <p class="desc">You are registered as a <b>${p.rank}-Rank ${p.specialization?p.specialization+' ':''}${p.class}</b>.</p>
+    ${guildRankHeaderHtml}
     ${guildUpgradeHtml}
     ${questHtml}
     ${expeditionHtml}
@@ -2774,6 +3685,25 @@ function openForge(){
     return;
   }
 
+  const mats = p.materials || {};
+  const matText = `🪨 Iron Ore: <b>${mats.ironOre||0}</b> · 🔮 Shadow Essence: <b>${mats.shadowEssence||0}</b> · 👁️ Monster Core: <b>${mats.monsterCore||0}</b>`;
+  const canCraftGodslayer = p.gold >= 500 && (mats.ironOre||0) >= 30 && (mats.shadowEssence||0) >= 10 && (mats.monsterCore||0) >= 5;
+
+  const mythicCraftHtml = `
+    <p class="branch-title">⚡ Mythic Weapon Crafting (Overpowered Weapon)</p>
+    <div class="item-row" style="border:1px solid #e8b34d; background:rgba(232,179,77,0.08); padding:10px; border-radius:8px; margin-bottom:12px;">
+      <span>
+        <span class="rank-pill" style="background:#ff3366; color:#fff; font-weight:bold;">EX OVERPOWERED</span>
+        <b style="font-size:14px; margin-left:6px; color:var(--gold);">🔨 Godslayer Warhammer</b>
+        <div style="color:var(--good); font-size:11.5px; margin-top:3px; font-weight:600;">+70 STR · +50 VIT · +20 AGI · +25% Crit Bonus</div>
+        <div style="color:var(--ink-dim); font-size:11px; margin-top:2px;">Requires: 500 Gold, 30 Iron Ore, 10 Shadow Essence, 5 Monster Core</div>
+      </span>
+      <button class="primary" style="background:linear-gradient(90deg, #ff3366, #e8b34d); border:none; padding:8px 14px;" onclick="craftGodslayerWeapon()" ${canCraftGodslayer ? '' : 'disabled'}>
+        ${canCraftGodslayer ? 'Craft Weapon' : 'Need Materials'}
+      </button>
+    </div>
+  `;
+
   const forgeLvl = (p.buildingLevels && p.buildingLevels.forge) || 1;
   const maxUpgradeCap = 5 + (forgeLvl - 1) * 5;
   const forgeUpgradeHtml = `
@@ -2844,6 +3774,7 @@ function openForge(){
     <button class="close-x" onclick="closeModal()">✕</button>
     <h2>Blacksmith Forge</h2>
     <p class="desc">${matText}</p>
+    ${mythicCraftHtml}
     ${forgeUpgradeHtml}
     <p class="branch-title">💎 Gem Socketing (+3 Gear Sockets)</p>
     <p class="desc" style="font-size:11px; margin-bottom:4px;">${gemText}</p>
@@ -2854,6 +3785,34 @@ function openForge(){
     <div style="max-height: 140px; overflow-y:auto;">${dismantleRows}</div>
     <div class="modal-actions"><button class="primary" onclick="closeModal()">Close</button></div>
   `);
+}
+
+function craftGodslayerWeapon(){
+  const p = state.player;
+  const mats = p.materials || {};
+  if(p.gold < 500 || (mats.ironOre||0) < 30 || (mats.shadowEssence||0) < 10 || (mats.monsterCore||0) < 5) return;
+
+  p.gold -= 500;
+  mats.ironOre -= 30;
+  mats.shadowEssence -= 10;
+  mats.monsterCore -= 5;
+
+  const item = {
+    id: itemIdCounter++,
+    name: "Godslayer Warhammer 🔨",
+    rank: "S",
+    slot: "weapon",
+    statBonus: { STR: 70, VIT: 50, AGI: 20 },
+    critBonus: 25,
+    set: "vanguard"
+  };
+
+  p.inventory.push(item);
+  recomputeDerived(p);
+  refreshHud();
+  Sound.levelUp();
+  toast("⚡ CRAFTED MYTHIC WEAPON: Godslayer Warhammer!", "#e8b34d");
+  openForge();
 }
 
 function upgradeGear(itemId){
@@ -3336,6 +4295,19 @@ function executeSkill(sk){
   const eff = getEffectiveStats(p);
   c.focus -= sk.cost;
 
+  if(!p.skillMastery) p.skillMastery = {};
+  const curMastery = p.skillMastery[sk.id] || 0;
+  if(curMastery < 100){
+    p.skillMastery[sk.id] = Math.min(100, curMastery + 10);
+    if(p.skillMastery[sk.id] === 100){
+      toast(`✨ SKILL MASTERED! ${sk.name} reaches 100% Mastery!`, '#f0c562');
+      if(SKILL_EVOLUTIONS[sk.id] && !p.unlockedSkills.includes(SKILL_EVOLUTIONS[sk.id].nextId)){
+        p.unlockedSkills.push(SKILL_EVOLUTIONS[sk.id].nextId);
+        toast(`🔥 SKILL EVOLVED! Unlocked ${SKILL_EVOLUTIONS[sk.id].name}!`, '#ffd875');
+      }
+    }
+  }
+
   if(sk.type === 'heal'){
     const heal = Math.round(p.maxHp * sk.healPct);
     p.hp = Math.min(p.maxHp, p.hp + heal);
@@ -3469,25 +4441,6 @@ function resolveEnemyTurn(lineSoFar){
     if(c.enemy.hp <= 0){ handleEnemyDefeated(line); return; }
   }
 
-  if(p.evadeNext){
-    p.evadeNext = false;
-    line += ` You dodge the ${c.enemy.name}'s attack completely.`;
-    refreshHud();
-    renderCombat(line);
-    return;
-  }
-
-  const hits = (c.enemy.trait === 'vicious' && Math.random() < 0.3) ? 2 : 1;
-  let totalDmg = 0;
-  for(let i=0;i<hits;i++){ totalDmg += Math.max(1, c.enemy.atk - Math.floor(eff.VIT/2)); }
-  totalDmg = Math.max(1, Math.round(totalDmg * (1 + (p.talentMods.dmgTakenPct||0))));
-
-  if(p.shield > 0){
-    const absorbed = Math.min(p.shield, totalDmg);
-    p.shield -= absorbed;
-    totalDmg -= absorbed;
-    if(absorbed > 0) line += ` Your shield absorbs ${absorbed} damage.`;
-  }
 
   if(totalDmg > 0 && c) c.combo = 0;
 
